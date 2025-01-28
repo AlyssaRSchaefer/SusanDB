@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneDrive Files</title>
+</head>
+<body>
+    <h1>Welcome, {{ user['preferred_username'] }}</h1>
+    <button id="fetch-files-btn">Load Files from OneDrive</button>
+    <ul id="file-list"></ul>
+
+    <script>
+        document.getElementById("fetch-files-btn").addEventListener("click", async function() {
+            let response = await fetch("/files");
+            let files = await response.json();
+            let fileList = document.getElementById("file-list");
+            files.forEach(file => {
+                let li = document.createElement("li");
+                li.textContent = file.name;
+                fileList.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>

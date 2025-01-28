@@ -1,33 +1,77 @@
-from flask import Flask, render_template, jsonify, request
-import webview
+import msal
 import threading
+import os
+from dotenv import load_dotenv
+from flask import Flask, request, redirect, jsonify
+import webview
 
-# Initialize Flask app
+# Load environment variables from .env file
+load_dotenv()
+
+# Flask app setup
 app = Flask(__name__)
 
-# Define a route for the home page
+# Constants for Azure app registration loaded from environment variables
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+AUTHORITY = os.getenv('AUTHORITY')
+SCOPE = os.getenv('SCOPE').split(',')
+REDIRECT_URI = os.getenv('REDIRECT_URI')
+API_VERSION = os.getenv('API_VERSION')
+
+# MSAL (Microsoft Authentication Library) app setup
+def _build_msal_app():
+    return msal.PublicClientApplication(
+        CLIENT_ID,
+        authority=AUTHORITY
+    )
+
+# Flask route to initiate the login process
 @app.route('/')
 def index():
-    return render_template('index.html')
+    msal_app = _build_msal_app()
+    # Get the authorization URL
+    auth_url = msal_app.get_authorization_request_url(SCOPE, redirect_uri=REDIRECT_URI)
+    
+    # Redirect the user to the Microsoft login page
+    return redirect(auth_url)
 
-# Example API endpoint
-@app.route('/api/greet', methods=['POST'])
-def greet():
-    data = request.json
-    name = data.get('name', 'Guest')  # Default to 'Guest' if no name provided
-    return jsonify(message=f"Hello, {name}!")
+# Flask route to handle the OAuth2 callback
+@app.route('/get_token')
+def get_token():
+    msal_app = _build_msal_app()
+    # Extract the authorization code from the request
+    code = request.args.get('code')
 
-# Function to start Flask in a separate thread
+    if not code:
+        return "Authorization code is missing", 400
+
+    # Exchange the authorization code for an access token
+    result = msal_app.acquire_token_by_authorization_code(code, scopes=SCOPE, redirect_uri=REDIRECT_URI)
+    
+    if 'access_token' in result:
+        # Successful authentication, display the access token
+        return jsonify({'access_token': result['access_token']})
+    else:
+        # If failed, return the error response
+        return jsonify(result), 400
+
+# Function to start Flask server in a separate thread
 def start_flask():
-    app.run(port=5000, debug=False)
+    app.run(port=5000)
 
-# Main entry point
+# Function to start PyWebView for login
+def start_webview():
+    # Get the authorization URL from Flask
+    auth_url = 'http://localhost:5000/'
+    webview.create_window('Microsoft Login', auth_url)
+    webview.start()
+
+# Run Flask server and PyWebView in separate threads
 if __name__ == '__main__':
     # Start Flask server in a separate thread
     flask_thread = threading.Thread(target=start_flask)
-    flask_thread.daemon = True
     flask_thread.start()
-
-    # Create a PyWebView window to load the Flask app
-    webview.create_window('Flask + PyWebView', 'http://127.0.0.1:5000')
-    webview.start()
+    
+    # Start PyWebView window to initiate Microsoft login
+    start_webview()
