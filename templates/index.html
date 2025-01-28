@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flask + PyWebView</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            font-size: 16px;
+        }
+        #message {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Flask + PyWebView!</h1>
+    <p>Enter your name and press the button:</p>
+    <input type="text" id="name" placeholder="Your Name">
+    <button onclick="greet()">Say Hello</button>
+    <p id="message"></p>
+
+    <script>
+        async function greet() {
+            const name = document.getElementById('name').value;
+            const response = await fetch('/api/greet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name })
+            });
+            const data = await response.json();
+            document.getElementById('message').innerText = data.message;
+        }
+    </script>
+</body>
+</html>
