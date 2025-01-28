@@ -26,10 +26,21 @@ body {
     height: 60px;
 }
 
+.navbar-heading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .navbar-name {
     font-family: var(--font-primary);
     font-size: 3rem;
-    padding-left: 20px;
+    padding: 0 20px;
+}
+
+.navbar .navbar-heading img {
+    height: 40px;
+    width: auto;
 }
 
 .navbar-links {
@@ -39,6 +50,7 @@ body {
     display: flex;
     gap: 0rem;
     height: 100%;
+    white-space: nowrap;
 }
 
 .navbar-links li {
@@ -46,6 +58,7 @@ body {
     height: 100%;
     display: flex;
     align-items: center;
+    transition: background-color 0.3s ease;
 }
 .navbar-links li:hover {
     background-color: var(--primary-color-highlight);
