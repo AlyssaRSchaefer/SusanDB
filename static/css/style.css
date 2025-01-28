@@ -69,9 +69,23 @@ body {
     color: white;
     text-decoration: none;
     font-size: 1rem;
+    display: flex;
+    height: 100%;
+    width: 100%;
+    align-items: center;
   }
 
-/* DATABASE VIEW */
+/* DATABASE PAGE */
 .database {
     background-color: var(--secondary-color);
+}
+
+/* TEMPLATES PAGE */
+.templates h1 {
+    color: green;
+}
+
+/* IMPORT PAGE */
+.import h1 {
+    color: blue;
 }

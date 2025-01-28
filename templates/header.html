@@ -15,9 +15,9 @@
       <img src="static\icons\icon-db.png" alt="database icon">
     </div>
     <ul class="navbar-links">
-      <li><a href="#database">DATABASE</a></li>
-      <li><a href="#import">IMPORT DATA</a></li>
-      <li><a href="#templates">TEMPLATES</a></li>
+      <li><a href="{{ url_for('database') }}">DATABASE</a></li>
+      <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
+      <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
       <li><a href="#logout">LOGOUT</a></li>
     </ul>
   </nav>
