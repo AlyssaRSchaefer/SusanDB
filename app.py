@@ -8,7 +8,7 @@ app = Flask(__name__)
 # Define a route for the home page
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('database.html')
 
 # Example API endpoint
 @app.route('/api/greet', methods=['POST'])

@@ -1,0 +1,64 @@
+:root {
+    /* Colors */
+    --primary-color: #AEB3CE;
+    --primary-color-highlight: #A1A7C7;
+    --secondary-color: #E8E8E8;
+    --secondary-color-highlight: #F2F2F2;
+    --tertiary-color: #ffffff;
+
+    /* Fonts */
+    --font-primary: "Courier New", monospace; /* For titles */
+    --font-secondary: "Open Sans", sans-serif;
+}
+
+body {
+    padding: 0px;
+    margin: 0px;
+}
+
+/* NAVIGATION BAR */
+.navbar {
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+}
+
+.navbar-name {
+    font-family: var(--font-primary);
+    font-size: 3rem;
+    padding-left: 20px;
+}
+
+.navbar-links {
+    font-family: var(--font-secondary);
+    font-size: 1.5rem;
+    list-style: none;
+    display: flex;
+    gap: 0rem;
+    height: 100%;
+}
+
+.navbar-links li {
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+.navbar-links li:hover {
+    background-color: var(--primary-color-highlight);
+    cursor: pointer;
+}
+
+.navbar-links li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+  }
+
+/* DATABASE VIEW */
+.database {
+    background-color: var(--secondary-color);
+}
