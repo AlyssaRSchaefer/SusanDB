@@ -8,7 +8,9 @@ app.config["DATABASE"] = "students.db"
 
 @app.route('/')
 def index():
-    return render_template('database.html')
+    return render_template('auxiliary/layout.html', 
+                           heading="Layout Heading", 
+                           back_link="/database")
 
 @app.route('/database')
 def database():
@@ -37,6 +39,13 @@ def greet():
     data = request.json
     name = data.get('name', 'Guest')  # Default to 'Guest' if no name provided
     return jsonify(message=f"Hello, {name}!")
+
+@app.route('/layout')
+def layout():
+    # Here, you pass the dynamic variables to the template
+    return render_template('auxiliary/layout.html', 
+                           heading="Welcome to the Auxiliary Page", 
+                           back_link="/")  # You can change this to any page you want
 
 # Function to start Flask in a separate thread
 def start_flask():

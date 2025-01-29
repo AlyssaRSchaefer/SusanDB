@@ -13,6 +13,9 @@
 
     /* Margin */
     --horizontal-margin: 150px;
+
+    /* Navigation Bar Height */
+    --navbar-height: 60px;
 }
 
 body {
@@ -22,7 +25,7 @@ body {
     font-family: var(--font-secondary);
 }
 
-/* COMMON ELEMENTS */
+/* SHARED COMPONENTS  */
 
 .text {
     border: none;
@@ -66,6 +69,7 @@ body {
     background-color: var(--secondary-color-highlight);
 }
 
+
 /* NAVIGATION BAR */
 .navbar {
     background-color: var(--primary-color);
@@ -77,7 +81,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 60px;
+    height: var(--navbar-height);
 }
 
 .navbar-heading {
@@ -88,12 +92,12 @@ body {
 
 .navbar-name {
     font-family: var(--font-primary);
-    font-size: 3rem;
-    padding: 0 20px;
+    font-size: 2rem;
+    padding: 0 10px 0 0;
 }
 
 .navbar .navbar-heading img {
-    height: 40px;
+    height: 30px;
     width: auto;
 }
 
@@ -130,8 +134,40 @@ body {
   }
 
 /* MULTIPLE PAGES */
-.database, .import, .templates {
+.database, .import, .templates, .auxiliary-content {
     margin: 0 var(--horizontal-margin);
+}
+
+/* AUXILIARY PAGES */
+
+.auxiliary {
+    position: relative;
+}
+
+.auxiliary-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--secondary-color-highlight);
+    min-height: calc(100vh - var(--navbar-height));
+}
+
+.auxiliary h1 { 
+    margin: 0;
+    font-family: var(--font-primary);
+    color: var(--quarternary-color);
+    font-size: 3rem;
+    font-weight: 300;
+}
+
+.back-icon {
+    width: 35px;
+    height: auto;
+    display: block;
+    background-size: cover; 
+    position: absolute;
+    top: 5px;
+    left: 5px;
 }
 
 /* DATABASE PAGE */
