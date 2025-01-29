@@ -9,17 +9,19 @@
 </head>
 <body>
   <nav class="navbar">
-    <div class="navbar-heading">
-      <div class="navbar-name">SusanDB</div>
-      <img src="static\icons\icon-nurse.png" alt="nurse icon">
-      <img src="static\icons\icon-db.png" alt="database icon">
+    <div class="navbar-elements">
+      <div class="navbar-heading">
+        <div class="navbar-name">SusanDB</div>
+        <img src="static\icons\icon-nurse.png" alt="nurse icon">
+        <img src="static\icons\icon-db.png" alt="database icon">
+      </div>
+      <ul class="navbar-links">
+        <li><a href="{{ url_for('database') }}">DATABASE</a></li>
+        <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
+        <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
+        <li><a href="#logout">LOGOUT</a></li>
+      </ul>
     </div>
-    <ul class="navbar-links">
-      <li><a href="{{ url_for('database') }}">DATABASE</a></li>
-      <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
-      <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
-      <li><a href="#logout">LOGOUT</a></li>
-    </ul>
   </nav>
   {% block content %}{% endblock %}
 </body>
