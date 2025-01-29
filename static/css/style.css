@@ -139,7 +139,7 @@ body {
 .database-controls {
     display: flex;
     justify-content: space-between;
-    margin: 50px 0;
+    margin: 25px 0;
 }
 
 .database-controls-left{
@@ -163,6 +163,12 @@ body {
     height: 15px;
     width: auto;
     margin: 0 2.5px;
+}
+
+.database-divider {
+    height: 10px;
+    width: 100%;
+    background-color: var(--tertiary-color);
 }
 
 /* TEMPLATES PAGE */
