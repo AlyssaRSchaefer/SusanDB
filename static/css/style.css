@@ -171,6 +171,36 @@ body {
     background-color: var(--tertiary-color);
 }
 
+.database-table {
+    width: 100%;
+    color: var(--quarternary-color);
+    border-collapse: separate; /* Separates the rows */
+    border-spacing: 0 2px;
+}
+
+.database-table thead tr {
+    background-color: var(--secondary-color); 
+}
+
+.database-table tbody tr {
+    background-color: var(--tertiary-color); 
+    margin-top: 2px;
+}
+
+.database-table thead tr:hover {
+    background-color: var(--secondary-color); 
+}
+
+.database-table tbody tr:hover {
+    background-color: var(--secondary-color-highlight);
+}
+
+td, th {
+    border: none;
+    padding: 15px 10px;
+    text-align: center;
+}
+
 /* TEMPLATES PAGE */
 .templates h1 {
     color: green;
