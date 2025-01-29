@@ -5,20 +5,74 @@
     --secondary-color: #E8E8E8;
     --secondary-color-highlight: #F2F2F2;
     --tertiary-color: #ffffff;
+    --quarternary-color: #747474;
 
     /* Fonts */
     --font-primary: "Courier New", monospace; /* For titles */
     --font-secondary: "Open Sans", sans-serif;
+
+    /* Margin */
+    --horizontal-margin: 150px;
 }
 
 body {
     padding: 0px;
-    margin: 0px;
+    margin: 0;
+    background-color: var(--secondary-color);
+    font-family: var(--font-secondary);
+}
+
+/* COMMON ELEMENTS */
+
+.text {
+    border: none;
+    outline: none;
+    padding: 5px 5px;
+    border-radius: 2.5%;
+    font-family: var(--font-secondary);
+}
+
+.button {
+    padding: 5px 20px;
+    border-radius: 5%;
+}
+
+.button, .text {
+    height: 20px;
+    width: auto;
+    margin: 2px;
+    white-space: nowrap;
+}
+
+.button:hover {
+    cursor: pointer;
+}
+
+.primary-button {
+    background-color: var(--primary-color);
+    color: var(--tertiary-color)
+}
+
+.primary-button:hover {
+    background-color: var(--primary-color-highlight);
+}
+
+.secondary-button {
+    background-color: var(--tertiary-color);
+    color: var(--quarternary-color);
+}
+
+.secondary-button:hover {
+    background-color: var(--secondary-color-highlight);
 }
 
 /* NAVIGATION BAR */
 .navbar {
     background-color: var(--primary-color);
+}
+
+.navbar-elements {
+    margin: 0 var(--horizontal-margin);
     color: white;
     display: flex;
     justify-content: space-between;
@@ -75,9 +129,40 @@ body {
     align-items: center;
   }
 
+/* MULTIPLE PAGES */
+.database, .import, .templates {
+    margin: 0 var(--horizontal-margin);
+}
+
 /* DATABASE PAGE */
-.database {
-    background-color: var(--secondary-color);
+
+.database-controls {
+    display: flex;
+    justify-content: space-between;
+    margin: 50px 0;
+}
+
+.database-controls-left{
+    display: flex;
+    justify-content: left;
+}
+
+.database-controls-right{
+    display: flex;
+    justify-content: right;
+}
+
+.search-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--tertiary-color);
+}
+
+.search-icon {
+    height: 15px;
+    width: auto;
+    margin: 0 2.5px;
 }
 
 /* TEMPLATES PAGE */
