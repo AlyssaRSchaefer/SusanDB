@@ -1,11 +1,11 @@
 :root {
     /* Colors */
-    --primary-color: #AEB3CE;
+    --primary-color: #AEB3CE; /* purple */
     --primary-color-highlight: #A1A7C7;
-    --secondary-color: #E8E8E8;
+    --secondary-color: #E8E8E8; /* light gray */
     --secondary-color-highlight: #F2F2F2;
-    --tertiary-color: #ffffff;
-    --quarternary-color: #747474;
+    --tertiary-color: #ffffff; /* white */
+    --quarternary-color: #747474; /* dark gray */
 
     /* Fonts */
     --font-primary: "Courier New", monospace; /* For titles */
