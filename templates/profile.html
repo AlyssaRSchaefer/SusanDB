@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile</title>
+</head>
+<body>
+    <h1>Profile</h1>
+    {% if access_token %}
+        <p>Access Token: {{ access_token }}</p>
+        {% else %}
+        <p>Not logged in.</p>
+    {% endif %}
+</body>
+</html>

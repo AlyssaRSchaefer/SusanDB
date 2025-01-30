@@ -1,71 +1,79 @@
-import msal
-import threading
 import os
+import logging
 from dotenv import load_dotenv
-from flask import Flask, request, redirect, jsonify
+import msal
 import webview
+import threading
+from flask import Flask, render_template
+import requests
 
-# Load environment variables from .env file
+# Configure logging
+# logging.basicConfig(level=logging.DEBUG)
+
+# Load environment variables
 load_dotenv()
 
-# Flask app setup
-app = Flask(__name__)
+app = Flask(__name__)  # Flask app (needed for other potential endpoints)
+app.secret_key = os.getenv("SESSION_SECRET")
+access_token = False
 
-# Constants for Azure app registration loaded from environment variables
-CLIENT_ID = os.getenv('CLIENT_ID')
-CLIENT_SECRET = os.getenv('CLIENT_SECRET')
-AUTHORITY = os.getenv('AUTHORITY')
-SCOPE = os.getenv('SCOPE').split(',')
-REDIRECT_URI = os.getenv('REDIRECT_URI')
-API_VERSION = os.getenv('API_VERSION')
+# Configuration from environment variables
+CLIENT_ID = os.getenv("CLIENT_ID")
+AUTHORITY = os.getenv("AUTHORITY")
+SCOPES = os.getenv("SCOPE").split(",")
+REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 
-# MSAL (Microsoft Authentication Library) app setup
+if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI, app.secret_key]):
+    raise ValueError("Missing required environment variables. Check your .env file.")
+
+# MSAL app setup
 def _build_msal_app():
     return msal.PublicClientApplication(
-        CLIENT_ID,
+        client_id=CLIENT_ID,
         authority=AUTHORITY
     )
 
-# Flask route to initiate the login process
-@app.route('/')
-def index():
-    msal_app = _build_msal_app()
-    # Get the authorization URL
-    auth_url = msal_app.get_authorization_request_url(SCOPE, redirect_uri=REDIRECT_URI)
-    
-    # Redirect the user to the Microsoft login page
-    return redirect(auth_url)
+msal_app = _build_msal_app()
 
-# Flask route to handle the OAuth2 callback
-@app.route('/get_token')
-def get_token():
-    msal_app = _build_msal_app()
-    # Extract the authorization code from the request
-    code = request.args.get('code')
+def login():
+    with app.app_context():  # Ensure Flask's application context is available
+        result = msal_app.acquire_token_interactive(SCOPES)
 
-    if not code:
-        return "Authorization code is missing", 400
+        if "access_token" in result:
+            access_token = result.get("access_token")
+            user_data = get_user_profile(access_token)
+            return render_template("profile.html", access_token=user_data)
+        else:
+            return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
-    # Exchange the authorization code for an access token
-    result = msal_app.acquire_token_by_authorization_code(code, scopes=SCOPE, redirect_uri=REDIRECT_URI)
-    
-    if 'access_token' in result:
-        # Successful authentication, display the access token
-        return jsonify({'access_token': result['access_token']})
+def get_user_profile(access_token):
+    # Microsoft Graph API endpoint for User.Read
+    url = "https://graph.microsoft.com/v1.0/me"
+
+    # Authorization header with the access token
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    # Make the GET request
+    response = requests.get(url, headers=headers)
+
+    # Check if the response is successful
+    if response.status_code == 200:
+        user_data = response.json()
+        return user_data
     else:
-        # If failed, return the error response
-        return jsonify(result), 400
+        return f"Error: {response.status_code} - {response.text}"
+
+
+# Function to start PyWebView for login
+def start_webview():
+    webview.create_window('Microsoft Login', html=login())
+    webview.start()
 
 # Function to start Flask server in a separate thread
 def start_flask():
     app.run(port=5000)
-
-# Function to start PyWebView for login
-def start_webview():
-    # Get the authorization URL from Flask
-    auth_url = 'http://localhost:5000/'
-    webview.create_window('Microsoft Login', auth_url)
-    webview.start()
 
 # Run Flask server and PyWebView in separate threads
 if __name__ == '__main__':
