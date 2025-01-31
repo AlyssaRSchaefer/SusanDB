@@ -15,6 +15,24 @@ import base64
 load_dotenv()
 
 app = Flask(__name__)
+
+# Define a route for the home page
+@app.route('/')
+def index():
+    return render_template('database.html')
+
+@app.route('/database')
+def database():
+    return render_template('database.html')
+
+@app.route('/import')
+def import_data():
+    return render_template('import.html')
+
+@app.route('/templates')
+def templates():
+    return render_template('templates.html')
+
 app.secret_key = os.getenv("SESSION_SECRET")
 
 # Configuration from environment variables
@@ -164,7 +182,7 @@ msal_app = _build_msal_app()
 
 # Function to start PyWebView for login
 def start_webview():
-    webview.create_window('Microsoft Login', html=login())
+    webview.create_window('SusanDB', html=login())
     webview.start()
 
 # Function to start Flask server in a separate thread
