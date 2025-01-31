@@ -4,11 +4,8 @@
     <title>Profile</title>
 </head>
 <body>
-    <h1>Profile</h1>
-    {% if access_token %}
-        <p>Access Token: {{ access_token }}</p>
-        {% else %}
-        <p>Not logged in.</p>
-    {% endif %}
+    <h1>Hello {{name}}</h1>
+        <p>file_id: {{file_id}}</p>
+        <p>update_result: {{update_result}}</p>
 </body>
 </html>
