@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - SusanDB</title>
+  <link rel="stylesheet" href="static\css\style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+</head>
+<body style="background-color: var(--primary-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; flex-direction: column; text-align: center;">
+    <div class="navbar-name navbar-heading" style="color: white;">SusanDB</div>
+    <form action="{{ url_for('login') }}" method="get">
+        <button class="primary-button" style="padding: 10px; color: rgb(94, 94, 94); margin: 20px;" type="submit">Login with Microsoft</button>
+    </form>
+</body>
+</html>

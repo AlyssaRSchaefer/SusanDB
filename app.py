@@ -7,6 +7,8 @@ import threading
 from flask import Flask, render_template, request
 import requests
 import base64
+from io import BytesIO
+import pandas as pd
 
 # Configure logging (optional)
 # logging.basicConfig(level=logging.DEBUG)
@@ -16,33 +18,18 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Define a route for the home page
-@app.route('/')
-def index():
-    return render_template('database.html')
-
-@app.route('/database')
-def database():
-    return render_template('database.html')
-
-@app.route('/import')
-def import_data():
-    return render_template('import.html')
-
-@app.route('/templates')
-def templates():
-    return render_template('templates.html')
-
-app.secret_key = os.getenv("SESSION_SECRET")
-
 # Configuration from environment variables
 CLIENT_ID = os.getenv("CLIENT_ID")
 AUTHORITY = os.getenv("AUTHORITY")
 SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
 REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 
-if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI, app.secret_key]):
+if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
+
+#################################################################################
+# Generic functions for  retreiving/uploading to OneDrive
+#################################################################################
 
 # encode the sharing URL into a share ID that Graph API understands
 def generate_share_id(sharing_url):
@@ -61,8 +48,7 @@ def list_shared_folder_contents(access_token, sharing_url):
         items = response.json().get("value", [])
         return items
     elif response.status_code == 403:
-        # TODO: add handling for is status is unauthorized
-        return None
+        return [403]
     else:
         logging.error(f"Error listing folder contents: {response.status_code} {response.text}")
         return None
@@ -103,11 +89,14 @@ def get_user_profile(access_token):
     else:
         return {"error": f"Error: {response.status_code} - {response.text}"}
 
+
 #################################################################################
-# App specific logic
+# App specific and routing logic
 #################################################################################
 
+
 # handles initial login logic
+@app.route('/login')
 def login():
     with app.app_context():
         # need access token to interact in any way with OneDrive API
@@ -115,6 +104,9 @@ def login():
 
         if "access_token" in result:
             access_token = result.get("access_token")
+
+            user_data = get_user_profile(access_token)
+            name = user_data.get("displayName", "Unknown User")
             
             # sharing_url is stored in .env
             sharing_url = os.getenv("SHARED_FOLDER_URL")
@@ -125,47 +117,54 @@ def login():
             folder_items = list_shared_folder_contents(access_token, sharing_url)
             if folder_items is None:
                 return "Failed to list folder contents."
+            
+            # i.e. access has been denied
+            if folder_items[0] == 403:
+                return render_template("access_denied.html", name=name)
 
-            ###############################################################################################
-            # TODO: replace this with logic for getting database
-            target_filename = "test.txt"
+
+            target_filename = "database.xlsx"
             target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
             if not target_file:
                 return f"File '{target_filename}' not found in the shared folder."
 
             file_id = target_file.get("id")
-            # Download the file
+
+            # Download the Excel file
             file_content = download_file(access_token, file_id)
             if file_content is None:
-                return "Failed to download the file."
-
-            # ---- EDIT THE FILE CONTENT ----
-            # Here, we assume the file is text-based. Adjust decoding/encoding as needed.
+                return "Failed to download the Excel file from OneDrive."
+            
             try:
-                text = file_content.decode("utf-8")
-            except UnicodeDecodeError:
-                return "Failed to decode file content."
-
-            # For example, append a line of text.
-            edited_text = text + "\nEdited on OneDrive via Graph API."
-
-            # Convert back to bytes
-            updated_content = edited_text.encode("utf-8")
-            # ---- END EDITING ----
-
-            # Reupload the file with the updated content
-            update_result = update_file(access_token, file_id, updated_content)
-            if update_result is None:
-                return "Failed to update the file on OneDrive."
-            ###############################################################################################
-
+                # Read the Excel file from an in-memory buffer
+                excel_buffer = BytesIO(file_content)
+                df = pd.read_excel(excel_buffer)
+                
+                # Convert the DataFrame to a list of dictionaries for easy rendering
+                student_data = df.to_dict(orient='records')
+            except Exception as e:
+                return f"Error reading Excel file: {e}"
             
-            user_data = get_user_profile(access_token)
-            name = user_data.get("displayName", "Unknown User")
-            
-            return render_template("profile.html", file_id=file_id, name=name, update_result=update_result)
+            return render_template("database.html", name=name, students=student_data)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
+        
+# Define a route for the home page
+@app.route('/')
+def index():
+    return render_template('login.html')
+
+@app.route('/database')
+def database():
+    return render_template('database.html')
+
+@app.route('/import')
+def import_data():
+    return render_template('import.html')
+
+@app.route('/templates')
+def templates():
+    return render_template('templates.html')
 
 #################################################################################
 # Functions to initiate app
@@ -180,9 +179,8 @@ def _build_msal_app():
 
 msal_app = _build_msal_app()
 
-# Function to start PyWebView for login
 def start_webview():
-    webview.create_window('SusanDB', html=login())
+    webview.create_window('SusanDB', url="http://127.0.0.1:5000/")
     webview.start()
 
 # Function to start Flask server in a separate thread
