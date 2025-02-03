@@ -4,14 +4,18 @@ from dotenv import load_dotenv
 import msal
 import webview
 import threading
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect, url_for
 import requests
 import base64
 from io import BytesIO
 import pandas as pd
+import sys
+import secrets
 
 # Configure logging (optional)
 # logging.basicConfig(level=logging.DEBUG)
+
+# NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +23,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configuration from environment variables
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 CLIENT_ID = os.getenv("CLIENT_ID")
 AUTHORITY = os.getenv("AUTHORITY")
 SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
@@ -103,9 +108,9 @@ def login():
         result = msal_app.acquire_token_interactive(SCOPES)
 
         if "access_token" in result:
-            access_token = result.get("access_token")
+            session["access_token"] = result.get("access_token")
 
-            user_data = get_user_profile(access_token)
+            user_data = get_user_profile(session["access_token"])
             name = user_data.get("displayName", "Unknown User")
             
             # sharing_url is stored in .env
@@ -114,13 +119,13 @@ def login():
                 return "No shared folder URL provided in environment variables."
 
             # List the contents of the shared folder
-            folder_items = list_shared_folder_contents(access_token, sharing_url)
+            folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
             if folder_items is None:
                 return "Failed to list folder contents."
             
             # i.e. access has been denied
             if folder_items[0] == 403:
-                return render_template("access_denied.html", name=name)
+                return render_template("login.html", name=name, access_denied=True)
 
 
             target_filename = "database.xlsx"
@@ -131,7 +136,7 @@ def login():
             file_id = target_file.get("id")
 
             # Download the Excel file
-            file_content = download_file(access_token, file_id)
+            file_content = download_file(session["access_token"], file_id)
             if file_content is None:
                 return "Failed to download the Excel file from OneDrive."
             
@@ -148,6 +153,12 @@ def login():
             return render_template("database.html", name=name, students=student_data)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
+
+@app.route('/logout')
+def logout():
+    session.clear()
+
+    return redirect(url_for('index'))
         
 # Define a route for the home page
 @app.route('/')
