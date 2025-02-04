@@ -13,6 +13,7 @@ from io import BytesIO
 import pandas as pd
 import sys
 import secrets
+import tempfile
 
 # Configure logging (optional)
 # logging.basicConfig(level=logging.DEBUG)
@@ -130,7 +131,7 @@ def login():
                 return render_template("login.html", name=name, access_denied=True)
 
 
-            target_filename = "database.xlsx"
+            target_filename = "students.db"
             target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
             if not target_file:
                 return f"File '{target_filename}' not found in the shared folder."
@@ -143,16 +144,31 @@ def login():
                 return "Failed to download the Excel file from OneDrive."
             
             try:
-                # Read the Excel file from an in-memory buffer
-                excel_buffer = BytesIO(file_content)
-                df = pd.read_excel(excel_buffer)
+                # Save the database file to a temporary location
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
+                    temp_db.write(file_content)
+                    temp_db_path = temp_db.name  # Store the file path
                 
-                # Convert the DataFrame to a list of dictionaries for easy rendering
-                student_data = df.to_dict(orient='records')
+                # Open SQLite database
+                conn = sqlite3.connect(temp_db_path)
+                cursor = conn.cursor()
+
+                # Fetch student data
+                cursor.execute("SELECT * FROM students")
+                rows = cursor.fetchall()
+
+                # Get column names
+                columns = [desc[0] for desc in cursor.description]
+
+                # Convert to dictionary format
+                student_data = [dict(zip(columns, row)) for row in rows]
+
+                # Close connection
+                conn.close()
             except Exception as e:
-                return f"Error reading Excel file: {e}"
+                return f"Error reading database file: {e}"
             
-            return render_template("database.html", name=name, students=student_data)
+            return render_template("database.html", name=name, students=student_data, field_order=columns)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
