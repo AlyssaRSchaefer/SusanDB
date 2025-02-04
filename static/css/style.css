@@ -207,6 +207,14 @@ body {
     background-color: var(--tertiary-color);
 }
 
+.database-table-container { 
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-color: var(--secondary-color-highlight) var(--secondary-color);
+    scrollbar-width: thin;
+}
+
 .database-table {
     width: 100%;
     color: var(--quarternary-color);
@@ -231,7 +239,12 @@ body {
     background-color: var(--secondary-color-highlight);
 }
 
+.database-column-name:hover {
+    background-color: var(--secondary-color-highlight);
+}
+
 td, th {
+    width: 150px;
     border: none;
     padding: 15px 10px;
     text-align: center;

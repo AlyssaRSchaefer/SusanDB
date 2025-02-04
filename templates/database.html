@@ -24,23 +24,25 @@
             </div>
         </div>
         <div class="database-divider"></div>
-        <table class="database-table">
-            <thead>
-                <tr class="database-head">
-                    {% for field in field_order %}
-                    <th>{{ field.replace('_', ' ').title() }}</th>  <!-- Format header names -->
+        <div class="database-table-container">
+            <table class="database-table">
+                <thead>
+                    <tr class="database-head">
+                        {% for field in field_order %}
+                        <th class="database-column-name">{{ field.replace('_', ' ').title() }}</th>  <!-- Format header names -->
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        {% for field in field_order %}
+                        <td>{{ student[field] }}</td>  <!-- Access field dynamically -->
+                        {% endfor %}
+                    </tr>
                     {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
-                <tr>
-                    {% for field in field_order %}
-                    <td>{{ student[field] }}</td>  <!-- Access field dynamically -->
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
 {% endblock %}

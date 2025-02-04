@@ -1,189 +1,16 @@
-import os
-import logging
-from dotenv import load_dotenv
-import msal
 from flask import Flask, g, render_template, jsonify, request
 import sqlite3
 import webview
 import threading
-from flask import Flask, render_template, request, session, redirect, url_for
-import requests
-import base64
-from io import BytesIO
-import pandas as pd
-import sys
-import secrets
-import tempfile
-
-# Configure logging (optional)
-# logging.basicConfig(level=logging.DEBUG)
-
-# NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
-
-# Load environment variables
-load_dotenv()
 
 app = Flask(__name__)
-
-# Configuration from environment variables
-app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
-CLIENT_ID = os.getenv("CLIENT_ID")
-AUTHORITY = os.getenv("AUTHORITY")
-SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
-REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
-
-if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
-    raise ValueError("Missing required environment variables. Check your .env file.")
-
-#################################################################################
-# Generic functions for  retreiving/uploading to OneDrive
-#################################################################################
-
-# encode the sharing URL into a share ID that Graph API understands
-def generate_share_id(sharing_url):
-    base64_value = base64.b64encode(sharing_url.encode()).decode()
-    share_id = "u!" + base64_value.rstrip("=").replace("/", "_").replace("+", "-")
-    return share_id
-
-# get all contents in shared folder
-def list_shared_folder_contents(access_token, sharing_url):
-    share_id = generate_share_id(sharing_url)
-    url = f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem/children"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        items = response.json().get("value", [])
-        return items
-    elif response.status_code == 403:
-        return [403]
-    else:
-        logging.error(f"Error listing folder contents: {response.status_code} {response.text}")
-        return None
-
-# download a file's content from OneDrive
-def download_file(access_token, file_id):
-    # Using the /content endpoint returns the raw bytes of the file
-    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.content
-    else:
-        logging.error(f"Error downloading file: {response.status_code} {response.text}")
-        return None
-
-# reupload the file by PUT-ing the new content
-def update_file(access_token, file_id, updated_content):
-    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/octet-stream"
-    }
-    response = requests.put(url, headers=headers, data=updated_content)
-    if response.status_code in [200, 201]:
-        return response.json()  # returns file metadata after upload
-    else:
-        logging.error(f"Error updating file: {response.status_code} {response.text}")
-        return None
-    
-# get user profile
-def get_user_profile(access_token):
-    url = "https://graph.microsoft.com/v1.0/me"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {"error": f"Error: {response.status_code} - {response.text}"}
-
-
-#################################################################################
-# App specific and routing logic
-#################################################################################
-
-
-# handles initial login logic
-@app.route('/login')
-def login():
-    with app.app_context():
-        # need access token to interact in any way with OneDrive API
-        result = msal_app.acquire_token_interactive(SCOPES)
-
-        if "access_token" in result:
-            session["access_token"] = result.get("access_token")
-
-            user_data = get_user_profile(session["access_token"])
-            name = user_data.get("displayName", "Unknown User")
-            
-            # sharing_url is stored in .env
-            sharing_url = os.getenv("SHARED_FOLDER_URL")
-            if not sharing_url:
-                return "No shared folder URL provided in environment variables."
-
-            # List the contents of the shared folder
-            folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
-            if folder_items is None:
-                return "Failed to list folder contents."
-            
-            # i.e. access has been denied
-            if folder_items[0] == 403:
-                return render_template("login.html", name=name, access_denied=True)
-
-
-            target_filename = "students.db"
-            target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
-            if not target_file:
-                return f"File '{target_filename}' not found in the shared folder."
-
-            file_id = target_file.get("id")
-
-            # Download the Excel file
-            file_content = download_file(session["access_token"], file_id)
-            if file_content is None:
-                return "Failed to download the Excel file from OneDrive."
-            
-            try:
-                # Save the database file to a temporary location
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-                    temp_db.write(file_content)
-                    temp_db_path = temp_db.name  # Store the file path
-                
-                # Open SQLite database
-                conn = sqlite3.connect(temp_db_path)
-                cursor = conn.cursor()
-
-                # Fetch student data
-                cursor.execute("SELECT * FROM students")
-                rows = cursor.fetchall()
-
-                # Get column names
-                columns = [desc[0] for desc in cursor.description]
-
-                # Convert to dictionary format
-                student_data = [dict(zip(columns, row)) for row in rows]
-
-                # Close connection
-                conn.close()
-            except Exception as e:
-                return f"Error reading database file: {e}"
-            
-            return render_template("database.html", name=name, students=student_data, field_order=columns)
-        else:
-            return f"Login failed: {result.get('error_description', 'Unknown error')}"
-
-@app.route('/logout')
-def logout():
-    session.clear()
-
-    return redirect(url_for('index'))
-        
-# Define a route for the home page
 app.config["DATABASE"] = "students.db"
 
 @app.route('/')
 def index():
-    return render_template('login.html')
+    return render_template('auxiliary/layout.html', 
+                           heading="Layout Heading", 
+                           back_link="/database")
 
 @app.route('/database')
 def database():
@@ -205,22 +32,13 @@ def import_data():
 def templates():
     return render_template('templates.html')
 
-#################################################################################
-# Functions to initiate app
-#################################################################################
 
-# MSAL app setup
-def _build_msal_app():
-    return msal.PublicClientApplication(
-        client_id=CLIENT_ID,
-        authority=AUTHORITY
-    )
-
-msal_app = _build_msal_app()
-
-def start_webview():
-    webview.create_window('SusanDB', url="http://127.0.0.1:5000/")
-    webview.start()
+# Example API endpoint
+@app.route('/api/greet', methods=['POST'])
+def greet():
+    data = request.json
+    name = data.get('name', 'Guest')  # Default to 'Guest' if no name provided
+    return jsonify(message=f"Hello, {name}!")
 
 @app.route('/layout')
 def layout():
@@ -231,7 +49,7 @@ def layout():
 
 # Function to start Flask in a separate thread
 def start_flask():
-    app.run(port=5000)
+    app.run(port=5000, debug=False)
 
 def get_db():
     if "db" not in g:
@@ -264,7 +82,9 @@ def get_students():
 if __name__ == '__main__':
     # Start Flask server in a separate thread
     flask_thread = threading.Thread(target=start_flask)
-    flask_thread.daemon = True  # so that it exits when main thread exits
+    flask_thread.daemon = True
     flask_thread.start()
-    
-    start_webview()
+
+    # Create a PyWebView window to load the Flask app
+    webview.create_window('SusanDB', 'http://127.0.0.1:5000')
+    webview.start()
