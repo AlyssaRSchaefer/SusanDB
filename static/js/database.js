@@ -1,5 +1,6 @@
-sort = {}
+let sort = {}
 let columns = [];
+let selectedStudents = []; 
 
 function updateSortUI(field){
     let iconID = "database-icon-" + field;
@@ -45,6 +46,11 @@ function fetchColumns() {
     .then(response => response.json())
     .then(data => {
         tableHeader.innerHTML = '';
+        
+        // Create checkbox for select all
+        const thCheckbox = document.createElement("th");
+        thCheckbox.innerHTML = `<input type="checkbox" id="select-all-checkbox" onclick="selectAll()">`;
+        tableHeader.appendChild(thCheckbox);
 
         data.forEach(field => {
             const th = document.createElement("th");
@@ -63,7 +69,7 @@ function fetchColumns() {
 
 
 function fetchData(sort = { name: 'ASC' }) {
-    const table = document.querySelector('table tbody'); // Assuming you want to append rows to the tbody
+    const table = document.querySelector('table tbody');
 
     fetch('/get_data', {
         method: 'POST',
@@ -78,6 +84,9 @@ function fetchData(sort = { name: 'ASC' }) {
         data.forEach(row => {
             const tr = document.createElement("tr");
 
+            const trCheckbox = document.createElement("td");
+            trCheckbox.innerHTML = `<input type="checkbox" id="student-`+ row["id"] + `" onclick="selectStudent(`+ row["id"] +`)">`;
+            tr.appendChild(trCheckbox);
 
             // Loop through columns to ensure correct order
             columns.forEach(col => {
