@@ -1,17 +1,41 @@
 sort = {}
 let columns = [];
 
-function sortTableByField(field){
+function updateSortUI(field){
     let iconID = "database-icon-" + field;
     let icon = document.getElementById(iconID);
-    icon.style.display = "inline";
-
     let columnHeader = document.getElementById(field);
-    columnHeader.style.backgroundColor = "var(--secondary-color-highlight)";
-
-    sort[field] = "ASC";
-    fetchData(sort);
     
+    if (icon) {
+        if (sort[field] === "ASC") {
+            icon.src = "static/icons/icon-up.png";
+            icon.style.display = "inline";
+        } else if (sort[field] === "DESC") {
+            icon.src = "static/icons/icon-down.png";
+            icon.style.display = "inline";
+        } else {
+            icon.style.display = "none";
+        }
+    }
+
+    if (columnHeader) {
+        columnHeader.style.backgroundColor = sort[field] ? "var(--secondary-color-highlight)" : "";
+    }
+}
+
+function sortTableByField(field){
+    
+    // Determine the new sort state
+    if (!(field in sort)) {
+        sort[field] = "ASC"; // Not in sort → Add as ASC
+    } else if (sort[field] === "ASC") {
+        sort[field] = "DESC"; // ASC → Change to DESC
+    } else {
+        delete sort[field]; // DESC → Remove from sort
+    }
+
+    updateSortUI(field);
+    fetchData(sort);
 }
 
 function fetchColumns() {

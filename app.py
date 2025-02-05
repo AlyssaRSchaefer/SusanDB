@@ -94,13 +94,19 @@ def get_field_order():
 
 def query_db(sort):
     db = get_db()
-    field = list(sort.keys())[0]
-    direction = sort[field]
     field_order = get_field_order()
-    query = f"SELECT {', '.join(field_order)} FROM students ORDER BY {field} {direction};"
+
+    # Construct ORDER BY clause
+    order_by_clauses = [f"{field} {direction}" for field, direction in sort.items()]
+    order_by_sql = ", ".join(order_by_clauses) if order_by_clauses else "id ASC"  # Default sort
+
+    # Construct the query
+    query = f"SELECT {', '.join(field_order)} FROM students ORDER BY {order_by_sql};"
+
     students = db.execute(query).fetchall()
     result = [dict(row) for row in students]
     return result
+
 
 
 # Main entry point
