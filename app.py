@@ -126,10 +126,11 @@ def login():
             if folder_items is None:
                 return "Failed to list folder contents."
             
+            session["folder_items"] = folder_items
+            
             # i.e. access has been denied
             if folder_items[0] == 403:
                 return render_template("login.html", name=name, access_denied=True)
-
 
             target_filename = "students.db"
             target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
@@ -159,9 +160,11 @@ def login():
 
                 # Get column names
                 columns = [desc[0] for desc in cursor.description]
+                session["columns"] = columns
 
                 # Convert to dictionary format
                 student_data = [dict(zip(columns, row)) for row in rows]
+                session["student_data"] = student_data
 
                 # Close connection
                 conn.close()
@@ -183,18 +186,12 @@ app.config["DATABASE"] = "students.db"
 
 @app.route('/')
 def index():
-    return render_template('login.html')
+    return redirect(url_for('templates'))
+    #return render_template("login.html")
 
 @app.route('/database')
 def database():
-    db = get_db()
-    field_order = get_field_order()
-
-    # Build dynamic SQL query
-    sql_query = f"SELECT {', '.join(field_order)} FROM students"
-    students = db.execute(sql_query).fetchall()
-
-    return render_template("database.html", students=students, field_order=field_order)
+    return render_template("database.html", students=session["student_data"], field_order=session["columns"])
 
 
 @app.route('/import')
@@ -203,7 +200,30 @@ def import_data():
 
 @app.route('/templates')
 def templates():
-    return render_template('templates.html')
+    templates = ['USER INFORMATION', 'TABLE 2', 'TABLE 3', 'TABLE 4']
+    template = {
+        'name': 'USER INFORMATION',
+        'fields': [
+            'First Name',
+            'Last Name',
+            'Email',
+            'Phone Number',
+            'Address',
+            'Date of Birth',
+            'First Name',
+            'Last Name',
+            'Email',
+            'Phone Number',
+            'Address',
+            'Date of Birth'
+        ]
+    }
+    return render_template('templates.html', template=template, templates=templates)
+
+@app.route('/new_template')
+def new_template():
+    columns=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
+    return render_template('new_template.html', columns=columns)
 
 #################################################################################
 # Functions to initiate app

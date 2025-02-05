@@ -238,11 +238,190 @@ td, th {
 }
 
 /* TEMPLATES PAGE */
-.templates h1 {
-    color: green;
+.templates-body {
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    width: 100%;
+    font-family: var(--font-secondary);
 }
+
+.templates-container {
+    display: flex;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box; /* Ensures padding is included in the width */
+    justify-content: center; /* Centers content horizontally */
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.templates-section {
+    flex: 1; 
+    min-width: 45%; /* Prevents sections from becoming too narrow */
+    margin: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.templates-delete-icon {
+    cursor: pointer;
+    color: gray;
+    margin-left: 10px; /* Adds spacing from text */
+    opacity: 0; /* Hide by default */
+    transition: opacity 0.2s ease-in-out, color 0.2s ease-in-out;
+    position: absolute;
+    right: 10px; /* Positions it to the far right */
+}
+
+.templates-scroll-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.templates-table-container {
+    overflow-y: auto; /* Enables scrolling */
+    width: 100%; /* Ensures it takes up full width */
+    position: relative;
+}
+
+.templates-table-container thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--secondary-color); /* Adjust as needed */
+    z-index: 2;
+}
+
+@media (max-height: 1000px) {
+    .templates-table-container {
+        max-height: 65vh;
+    }
+}
+
+@media (max-height: 750px) {
+    .templates-table-container {
+        max-height: 60vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .templates-table-container {
+        max-height: 55vh;
+    }
+}
+
+@media (max-height: 400px) {
+    .templates-table-container {
+        max-height: 200px;
+    }
+}
+
+.templates-controls {
+    display: flex;
+    justify-content: space-between;
+    margin: 25px 0;
+}
+
+.templates-controls-left{
+    display: flex;
+    justify-content: left;
+}
+
+.templates-table {
+    width: 100%;
+    color: var(--quarternary-color);
+    border-collapse: separate; /* Separates the rows */
+    border-spacing: 0 2px;
+}
+
+.templates-table thead tr {
+    background-color: var(--secondary-color); 
+}
+
+.templates-table tbody tr {
+    background-color: var(--tertiary-color); 
+    margin-top: 2px;
+    position: relative;
+}
+
+.templates-table thead tr:hover {
+    background-color: var(--secondary-color); 
+}
+
+.templates-table tbody tr:hover {
+    background-color: var(--secondary-color-highlight);
+}
+
+.templates-table tbody tr:hover .templates-delete-icon {
+    opacity: 1; /* Show on hover */
+}
+
+.templates-divider {
+    height: 10px;
+    width: 100%;
+    background-color: var(--tertiary-color);
+}
+
 
 /* IMPORT PAGE */
 .import h1 {
     color: blue;
+}
+
+/* NEW TEMPLATE PAGE */
+.new-template-input {
+    width: 100%;
+    padding: 8px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.new-template-header {
+    font-family: var(--font-primary);
+    text-align: center;
+    align-self: center;
+    color: var(--quarternary-color);
+    font-weight: lighter;
+    font-size: xx-large;
+}
+
+.new-template {
+    margin-left: 5vw;
+    margin-right: 5vw;
+    background-color: var(--secondary-color-highlight);
+    font-family: var(--font-secondary);
+}
+
+.checkbox-wrapper {
+    display: block; /* Forces checkboxes to stack vertically */
+    margin-bottom: 5px; /* Adds spacing between checkboxes */
+    position: absolute;
+    margin-left: 10px; /* Adds spacing from text */
+    left: 20%; /* Positions it to the far left */
+}
+
+.new-template-checkbox {
+    transform: scale(1.2); /* Optional: Makes checkboxes slightly bigger */
+    cursor: pointer; /* Ensures it's clearly clickable */
+}
+
+.new-template-button {
+    font-family: var(--font-secondary);
+    border: none;
+    padding: 8px;
+    margin: 0;
+    border-radius: 2px;
+}
+
+.new-template-controls {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
 }

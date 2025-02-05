@@ -1,9 +1,60 @@
 {% extends "header.html" %}
 
-{% block title %}Templates Page{% endblock %}
-
 {% block content %}
-    <div class="templates">
-        <h1>TEMPLATES PAGE</h1>
+  <div class="templates-container">
+    <div class="templates-section">
+            <div class="templates-controls">
+                <div class="templates-controls-left">
+                    <a href="{{ url_for('new_template') }}"  style="text-decoration: none;"><div class="button primary-button">NEW TEMPLATE</div></a>
+                </div>
+            </div>
+            <div class="templates-divider"></div>
+            <div class="templates-table-container">
+                <table class="templates-table">
+                    <thead>
+                        <tr>
+                            <th>SAVED TEMPLATES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for temp in templates %}
+                        <tr>
+                            <td>
+                                {{ temp }}
+                                <span class="templates-delete-icon">🗑️</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
     </div>
+    <div class="templates-section">
+            <div class="templates-controls">
+                <div class="templates-controls-left">
+                    <div class="button primary-button">NEW FIELD</div>
+                </div>
+            </div>
+            <div class="templates-divider"></div>
+                <div class="templates-table-container">
+                <table class="templates-table">
+                    <thead>
+                        <tr>
+                            <th>{{ template['name'] }} FIELDS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field in template['fields'] %}
+                            <tr>
+                                <td style="width: 100%; text-align: center;">
+                                    {{ field }}
+                                    <span class="templates-delete-icon">🗑️</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    </div>
+</div>
 {% endblock %}

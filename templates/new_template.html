@@ -1,0 +1,82 @@
+{% extends "header.html" %}
+
+{% block content %}
+<script>
+    function toggleSelectAll() {
+        let checkboxes = document.querySelectorAll('.new-template-checkbox');
+        let selectAllButton = document.getElementById('selectAllButton');
+        let allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+
+        checkboxes.forEach(checkbox => checkbox.checked = !allChecked);
+        selectAllButton.innerText = allChecked ? "Select All" : "Deselect All";
+    }
+
+    function submitTemplate() {
+        let templateName = document.getElementById("templateName").value;
+        let selectedColumns = Array.from(document.querySelectorAll('.new-template-checkbox:checked'))
+                                    .map(checkbox => checkbox.value);
+
+        if (!templateName.trim()) {
+            alert("Please enter a template name.");
+            return;
+        }
+
+        if (selectedColumns.length === 0) {
+            alert("Please select at least one column.");
+            return;
+        }
+
+        // Send data to backend
+        fetch('/create_template', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: templateName, columns: selectedColumns })
+        }).then(response => {
+            if (response.ok) {
+                window.location.href = "/templates"; // Redirect to templates page
+            } else {
+                alert("Failed to create template.");
+            }
+        });
+    }
+</script>
+<div class="new-template">
+
+<div class="templates-container">
+    <div class="templates-section">
+        <h1 class="new-template-header">Create New Template</h1>
+        <input type="text" id="templateName" class="new-template-input" placeholder="Enter template name...">
+        <div class="new-template-controls">
+            <div class="templates-controls-left">
+                <button id="selectAllButton" class="new-template-button primary-button" onclick="toggleSelectAll()">SELECT ALL</button>
+            </div>
+        </div>
+        
+        <div class="templates-table-container">
+            <table class="templates-table">
+                <thead>
+                    <tr>
+                        <th>Field Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for column in columns %}
+                    <tr>
+                        <td>
+                            <span class="checkbox-wrapper">
+                                <input type="checkbox" class="new-template-checkbox" value="{{ column }}">
+                            </span>
+                            {{ column }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                
+            </table>
+        </div>
+
+        <button class="primary-button new-template-button" onclick="submitTemplate()" style="width: 50%; margin-top: 30px; align-self: center;">CREATE TEMPLATE</button>
+    </div>
+</div>
+</div>
+{% endblock %}
