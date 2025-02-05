@@ -246,8 +246,17 @@ body {
 td, th {
     width: 150px;
     border: none;
-    padding: 15px 10px;
+    padding: 20px 25px;
     text-align: center;
+    position: relative;
+}
+
+.database-sort-icon {
+    display: none;
+    width: 20px;
+    height: auto;
+    position: absolute;
+    right: 5px;
 }
 
 /* TEMPLATES PAGE */

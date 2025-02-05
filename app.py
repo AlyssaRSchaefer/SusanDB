@@ -57,12 +57,6 @@ def get_db():
         g.db.row_factory = sqlite3.Row  # Allows dict-like access
     return g.db
 
-# Read the field order from the text file
-def get_field_order():
-    with open("app/pref/field_order.txt", "r") as f:
-        fields = [line.strip() for line in f.readlines()]
-    return fields
-
 # Close DB connection after request
 @app.teardown_appcontext
 def close_db(exception):
@@ -77,6 +71,37 @@ def get_students():
     cursor = db.execute("SELECT * FROM students")
     students = [dict(row) for row in cursor.fetchall()]
     return jsonify(students)
+
+# DATABASE LOGIC
+@app.route('/get_fields', methods=['GET'])
+def get_fields():
+    field_order = get_field_order()
+    return jsonify(field_order)
+
+@app.route('/get_data', methods=['POST'])
+def get_data():
+    data = request.json
+    sort = data.get('sort', {})
+    if not sort:
+        sort = {'name': 'ASC'}
+    queried_data = query_db(sort)
+    return jsonify(queried_data)
+
+def get_field_order():
+    with open("app/pref/field_order.txt", "r") as f:
+        fields = [line.strip() for line in f.readlines()]
+    return fields
+
+def query_db(sort):
+    db = get_db()
+    field = list(sort.keys())[0]
+    direction = sort[field]
+    field_order = get_field_order()
+    query = f"SELECT {', '.join(field_order)} FROM students ORDER BY {field} {direction};"
+    students = db.execute(query).fetchall()
+    result = [dict(row) for row in students]
+    return result
+
 
 # Main entry point
 if __name__ == '__main__':
