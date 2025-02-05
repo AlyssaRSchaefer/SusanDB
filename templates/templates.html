@@ -3,58 +3,90 @@
 {% block content %}
   <div class="templates-container">
     <div class="templates-section">
-            <div class="templates-controls">
-                <div class="templates-controls-left">
-                    <a href="{{ url_for('new_template') }}"  style="text-decoration: none;"><div class="button primary-button">NEW TEMPLATE</div></a>
-                </div>
-            </div>
-            <div class="templates-divider"></div>
-            <div class="templates-table-container">
-                <table class="templates-table">
-                    <thead>
-                        <tr>
-                            <th>SAVED TEMPLATES</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for temp in templates %}
-                        <tr>
-                            <td>
-                                {{ temp }}
-                                <span class="templates-delete-icon">🗑️</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+      <div class="templates-controls">
+        <div class="templates-controls-left">
+          <a href="{{ url_for('new_template') }}" style="text-decoration: none;">
+            <div class="button primary-button">NEW TEMPLATE</div>
+          </a>
+        </div>
+      </div>
+      <div class="templates-divider"></div>
+      <div class="templates-table-container">
+        <table class="templates-table">
+          <thead>
+            <tr>
+              <th>SAVED TEMPLATES</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for template_name, _ in templates_dict.items() %}
+              <tr>
+                <td>
+                  <a href="javascript:void(0)" class="template-link" onclick="loadTemplateFields('{{ template_name }}')" style="text-decoration: none;">
+                    {{ template_name }}
+                  </a>
+                  <span class="templates-delete-icon">🗑️</span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
+
     <div class="templates-section">
-            <div class="templates-controls">
-                <div class="templates-controls-left">
-                    <div class="button primary-button">NEW FIELD</div>
-                </div>
-            </div>
-            <div class="templates-divider"></div>
-                <div class="templates-table-container">
-                <table class="templates-table">
-                    <thead>
-                        <tr>
-                            <th>{{ template['name'] }} FIELDS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for field in template['fields'] %}
-                            <tr>
-                                <td style="width: 100%; text-align: center;">
-                                    {{ field }}
-                                    <span class="templates-delete-icon">🗑️</span>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+      <div class="templates-controls">
+        <div class="templates-controls-left">
+          <div class="button primary-button">NEW FIELD</div>
+        </div>
+      </div>
+      <div class="templates-divider"></div>
+      <div class="templates-table-container">
+        <table class="templates-table">
+          <thead>
+            <tr>
+              <th id="template-name-header">FIELDS</th>
+            </tr>
+          </thead>
+          <tbody id="template-fields-body">
+            <!-- Fields will be loaded here dynamically -->
+          </tbody>
+        </table>
+      </div>
     </div>
-</div>
+  </div>
+
+  <script>
+    const templatesDict = JSON.parse('{{ templates_dict | tojson }}');
+    
+    function loadTemplateFields(templateName) {
+        // Remove 'selected' class from all rows
+        const allTemplateLinks = document.querySelectorAll('.template-link');
+        allTemplateLinks.forEach(link => link.parentElement.classList.remove('.template-selected'));
+
+        // Add 'selected' class to the clicked template row
+        const selectedLink = document.querySelector(`a[onclick="loadTemplateFields('${templateName}')"]`);
+        selectedLink.parentElement.classList.add('.templateselected');
+
+        const fields = templatesDict[templateName];
+
+        // Update the header with the template name
+        document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
+
+        // Clear existing fields
+        const fieldsBody = document.getElementById('template-fields-body');
+        fieldsBody.innerHTML = '';
+
+        // Add new rows for fields
+        fields.forEach(field => {
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.textContent = field;
+            cell.style.textAlign = 'center';
+            row.appendChild(cell);
+            fieldsBody.appendChild(row);
+        });
+    }
+
+  </script>
 {% endblock %}

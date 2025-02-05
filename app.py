@@ -1,5 +1,4 @@
 import os
-import logging
 from dotenv import load_dotenv
 import msal
 from flask import Flask, g, render_template, jsonify, request
@@ -7,16 +6,10 @@ import sqlite3
 import webview
 import threading
 from flask import Flask, render_template, request, session, redirect, url_for
-import requests
-import base64
-from io import BytesIO
-import pandas as pd
-import sys
 import secrets
 import tempfile
 
-# Configure logging (optional)
-# logging.basicConfig(level=logging.DEBUG)
+from onedrive_utils import upload_new_file_no_duplicate, generate_share_id, list_shared_folder_contents, download_file, update_file, get_user_profile
 
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
@@ -34,69 +27,6 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
-
-#################################################################################
-# Generic functions for  retreiving/uploading to OneDrive
-#################################################################################
-
-# encode the sharing URL into a share ID that Graph API understands
-def generate_share_id(sharing_url):
-    base64_value = base64.b64encode(sharing_url.encode()).decode()
-    share_id = "u!" + base64_value.rstrip("=").replace("/", "_").replace("+", "-")
-    return share_id
-
-# get all contents in shared folder
-def list_shared_folder_contents(access_token, sharing_url):
-    share_id = generate_share_id(sharing_url)
-    url = f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem/children"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        items = response.json().get("value", [])
-        return items
-    elif response.status_code == 403:
-        return [403]
-    else:
-        logging.error(f"Error listing folder contents: {response.status_code} {response.text}")
-        return None
-
-# download a file's content from OneDrive
-def download_file(access_token, file_id):
-    # Using the /content endpoint returns the raw bytes of the file
-    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.content
-    else:
-        logging.error(f"Error downloading file: {response.status_code} {response.text}")
-        return None
-
-# reupload the file by PUT-ing the new content
-def update_file(access_token, file_id, updated_content):
-    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/octet-stream"
-    }
-    response = requests.put(url, headers=headers, data=updated_content)
-    if response.status_code in [200, 201]:
-        return response.json()  # returns file metadata after upload
-    else:
-        logging.error(f"Error updating file: {response.status_code} {response.text}")
-        return None
-    
-# get user profile
-def get_user_profile(access_token):
-    url = "https://graph.microsoft.com/v1.0/me"
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {"error": f"Error: {response.status_code} - {response.text}"}
-
 
 #################################################################################
 # App specific and routing logic
@@ -125,8 +55,6 @@ def login():
             folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
             if folder_items is None:
                 return "Failed to list folder contents."
-            
-            session["folder_items"] = folder_items
             
             # i.e. access has been denied
             if folder_items[0] == 403:
@@ -160,11 +88,9 @@ def login():
 
                 # Get column names
                 columns = [desc[0] for desc in cursor.description]
-                session["columns"] = columns
 
                 # Convert to dictionary format
                 student_data = [dict(zip(columns, row)) for row in rows]
-                session["student_data"] = student_data
 
                 # Close connection
                 conn.close()
@@ -186,8 +112,8 @@ app.config["DATABASE"] = "students.db"
 
 @app.route('/')
 def index():
-    return redirect(url_for('templates'))
-    #return render_template("login.html")
+    #return redirect(url_for('templates'))
+    return render_template("login.html")
 
 @app.route('/database')
 def database():
@@ -200,30 +126,108 @@ def import_data():
 
 @app.route('/templates')
 def templates():
-    templates = ['USER INFORMATION', 'TABLE 2', 'TABLE 3', 'TABLE 4']
-    template = {
-        'name': 'USER INFORMATION',
-        'fields': [
-            'First Name',
-            'Last Name',
-            'Email',
-            'Phone Number',
-            'Address',
-            'Date of Birth',
-            'First Name',
-            'Last Name',
-            'Email',
-            'Phone Number',
-            'Address',
-            'Date of Birth'
-        ]
-    }
-    return render_template('templates.html', template=template, templates=templates)
+    # Get the access token from the session (assumes the user is logged in)
+    access_token = session.get("access_token")
+    
+    # Ensure that the access token exists
+    if not access_token:
+        return "User is not logged in or session expired."
 
-@app.route('/new_template')
+    # The shared folder URL (retrieved from environment variable or another method)
+    shared_folder_url = os.getenv("SHARED_FOLDER_URL")
+    
+    # List the contents of the shared folder
+    folder_items = list_shared_folder_contents(access_token, shared_folder_url)
+
+    # Check if the shared folder contains a 'report_templates' folder
+    report_templates_folder = None
+    for item in folder_items:
+        if item.get("name") == "report_templates" and item.get("folder"):
+            report_templates_folder = item
+            break
+
+    if not report_templates_folder:
+        return "report_templates folder not found in the shared OneDrive folder."
+
+    # Now list the contents of the 'report_templates' folder
+    folder_items = list_shared_folder_contents(access_token, report_templates_folder["webUrl"])
+
+    templates_dict = {}
+
+    # Loop through the files in the 'report_templates' folder
+    for item in folder_items:
+        if item.get("name").endswith('.txt') and item.get("file"):
+            template_name = item.get("name").split('.')[0]  # Remove .txt extension
+            file_id = item.get("id")
+
+            # Download the file content (it will be the template fields)
+            file_content = download_file(access_token, file_id)
+            if not file_content:
+                continue
+
+            # Read the file content and split it into fields (each line)
+            fields = file_content.decode('utf-8').splitlines()
+
+            # Add the template name and its fields to the dictionary
+            templates_dict[template_name] = fields
+
+    # If no templates are found, return a message
+    if not templates_dict:
+        return "No templates found in the 'report_templates' folder."
+
+    # Pass the dictionary to the template
+    return render_template('templates.html', templates_dict=templates_dict)
+
+@app.route('/new_template', methods=['GET', 'POST'])
 def new_template():
-    columns=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
-    return render_template('new_template.html', columns=columns)
+    if request.method == 'GET':
+        columns = ['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
+        return render_template('auxiliary/new_template.html', back_link="/templates", columns=columns)
+    elif request.method == 'POST':
+        # Get JSON data from request
+        data = request.json
+        template_name = data.get("name")
+        selected_columns = data.get("columns")
+
+        if not template_name or not selected_columns:
+            return {"error": "Template name and columns are required."}, 400
+
+        
+        access_token = session.get("access_token")
+        if not access_token:
+            return {"error": "User not authenticated. Please log in."}, 401
+
+        # Retrieve shared folder contents
+        sharing_url = os.getenv("SHARED_FOLDER_URL")
+        folder_items = list_shared_folder_contents(access_token, sharing_url)
+        if not folder_items:
+            return {"error": "Failed to retrieve shared folder contents."}, 500
+
+        # Find "report_templates" folder
+        report_templates_folder = next((item for item in folder_items if item.get("name") == "report_templates"), None)
+        if not report_templates_folder:
+            return {"error": "report_templates folder not found in OneDrive."}, 404
+
+        report_templates_folder_id = report_templates_folder.get("id")
+        # Create the template file content
+        file_content = "\n".join(selected_columns)  # Each column in a new line
+
+        # Save file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_file:
+            temp_file.write(file_content.encode("utf-8"))
+            temp_file_path = temp_file.name
+
+        # Upload the file to OneDrive inside report_templates
+        file_name = f"{template_name}.txt"
+        upload_success = upload_new_file_no_duplicate(access_token, temp_file_path, file_name, report_templates_folder_id)
+
+        # Remove temporary file
+        os.remove(temp_file_path)
+
+        if upload_success[0]:
+            return {"message": "Template created successfully."}, 201
+        else:
+            return {"error": upload_success[1]}, 500
 
 #################################################################################
 # Functions to initiate app

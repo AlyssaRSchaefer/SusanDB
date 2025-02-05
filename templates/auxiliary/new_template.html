@@ -1,0 +1,108 @@
+{% extends 'auxiliary.html' %}
+{% block content %}
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spinner {
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-top: 3px solid white;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+</style>
+
+<script>
+    function toggleSelectAll() {
+        let checkboxes = document.querySelectorAll('.new-template-checkbox');
+        let selectAllButton = document.getElementById('selectAllButton');
+
+        let isSelecting = selectAllButton.innerText.trim() === "SELECT ALL";
+        checkboxes.forEach(checkbox => checkbox.checked = isSelecting);
+        selectAllButton.innerText = isSelecting ? "DESELECT ALL" : "SELECT ALL";
+    }
+
+    function submitTemplate() {
+        let templateName = document.getElementById("templateName").value;
+        let selectedColumns = Array.from(document.querySelectorAll('.new-template-checkbox:checked'))
+                                    .map(checkbox => checkbox.value);
+        let createButton = document.getElementById("createTemplateButton");
+
+        if (!templateName.trim()) {
+            alert("Please enter a template name.");
+            return;
+        }
+
+        if (selectedColumns.length === 0) {
+            alert("Please select at least one column.");
+            return;
+        }
+
+        // Disable button and show spinner
+        createButton.disabled = true;
+        createButton.innerHTML = '<span class="spinner"></span>';
+
+        // Send data to backend
+        fetch('/new_template', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: templateName, columns: selectedColumns })
+        }).then(response => {
+            if (response.ok) {
+                window.location.href = "/templates"; // Redirect to templates page
+            } else {
+                response.json().then(errorData => {
+                    alert(`Error: ${errorData.error}`);  // Display the error message from the server
+                });
+                    createButton.disabled = false;
+                    createButton.innerHTML = "CREATE TEMPLATE"; // Restore button
+            }
+        }).catch(() => {
+            alert("Network error. Please try again.");
+            createButton.disabled = false;
+            createButton.innerHTML = "CREATE TEMPLATE"; // Restore button
+        });
+    }
+</script>
+
+<div class="templates-section">
+    <input type="text" id="templateName" class="new-template-input" placeholder="Enter template name...">
+    <div class="new-template-controls">
+        <div class="templates-controls-left">
+            <button id="selectAllButton" class="new-template-button primary-button" onclick="toggleSelectAll()">SELECT ALL</button>
+        </div>
+    </div>
+    
+    <div class="templates-table-container">
+        <table class="templates-table">
+            <thead>
+                <tr>
+                    <th>Field Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for column in columns %}
+                <tr>
+                    <td>
+                        <span class="checkbox-wrapper">
+                            <input type="checkbox" class="new-template-checkbox" value="{{ column }}">
+                        </span>
+                        {{ column }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button id="createTemplateButton" class="primary-button new-template-button" onclick="submitTemplate()" 
+            style="width: 50%; margin-top: 30px; align-self: center;">
+        CREATE TEMPLATE
+    </button>
+</div>
+{% endblock %}

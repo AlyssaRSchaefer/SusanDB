@@ -368,6 +368,10 @@ td, th {
     background-color: var(--tertiary-color);
 }
 
+.template-selected{
+    background-color: var(--primary-color-highlight);
+}
+
 
 /* IMPORT PAGE */
 .import h1 {
@@ -418,6 +422,10 @@ td, th {
     padding: 8px;
     margin: 0;
     border-radius: 2px;
+}
+
+.new-template-button:hover {
+    cursor: pointer;
 }
 
 .new-template-controls {
