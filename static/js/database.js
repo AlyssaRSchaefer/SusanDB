@@ -1,6 +1,42 @@
 let sort = {}
 let columns = [];
 let selectedStudents = []; 
+let studentIDs = [];
+let allStudentsSelected = false;
+
+function selectStudent(id){
+    selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
+    let rowID = "database-row-" + id;
+    let row = document.getElementById(rowID);
+    selectedStudents.includes(id) ? row.style.backgroundColor = "var(--secondary-color-highlight)" : row.style.backgroundColor = "var(--tertiary-color)";
+}
+
+function selectAll(){
+    newBackgroundColor = ""
+    newCheckedStatus = true;
+
+    if (allStudentsSelected === false){
+        selectedStudents = studentIDs;
+        newBackgroundColor = "var(--secondary-color-highlight)";
+        allStudentsSelected = true;
+    }
+    else {
+        selectedStudents = [];
+        newBackgroundColor = "var(--tertiary-color)";
+        newCheckedStatus = false;
+        allStudentsSelected = false;
+    }
+    
+    const checkboxes = document.querySelectorAll('.database-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = newCheckedStatus; // Set each checkbox as checked
+    });
+
+    const rows = document.querySelectorAll('.database-table tr');
+    rows.forEach((row) => {
+        row.style.backgroundColor = newBackgroundColor;
+    });
+}
 
 function updateSortUI(field){
     let iconID = "database-icon-" + field;
@@ -83,9 +119,10 @@ function fetchData(sort = { name: 'ASC' }) {
         table.innerHTML = '';
         data.forEach(row => {
             const tr = document.createElement("tr");
+            tr.id = "database-row-" + row["id"];
 
             const trCheckbox = document.createElement("td");
-            trCheckbox.innerHTML = `<input type="checkbox" id="student-`+ row["id"] + `" onclick="selectStudent(`+ row["id"] +`)">`;
+            trCheckbox.innerHTML = `<input type="checkbox" class="database-checkbox" id="database-checkbox-`+ row["id"] + `" onclick="selectStudent(`+ row["id"] +`)">`;
             tr.appendChild(trCheckbox);
 
             // Loop through columns to ensure correct order
@@ -96,6 +133,7 @@ function fetchData(sort = { name: 'ASC' }) {
             });
 
             table.appendChild(tr);
+            studentIDs.push(row["id"]);
         });
     })
     .catch(error => console.error('Error:', error));

@@ -101,7 +101,7 @@ def query_db(sort):
     order_by_sql = ", ".join(order_by_clauses) if order_by_clauses else "id ASC"  # Default sort
 
     # Construct the query
-    query = f"SELECT {', '.join(field_order)} FROM students ORDER BY {order_by_sql};"
+    query = f"SELECT {', '.join(field_order)}, id FROM students ORDER BY {order_by_sql};"
 
     students = db.execute(query).fetchall()
     result = [dict(row) for row in students]
