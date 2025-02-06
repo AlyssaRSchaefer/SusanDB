@@ -2,7 +2,27 @@ let sort = {}
 let columns = [];
 let selectedStudents = []; 
 let studentIDs = [];
+let filter = ['ft/ptpt', 'fnamealyssa'];
 let allStudentsSelected = false;
+
+function createPill(field, value){
+    const pill = document.createElement("div");
+    pill.classList.add("pill");
+    pill.innerHTML = `<div class="pill-content">` + field.toUpperCase() + `:` + value.toUpperCase() + `</div><img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill(`+ field + value +`)"></img>`;
+    let pillBox = document.getElementById("database-pill-box");
+    pillBox.appendChild(pill);
+}
+
+function deletePill(pillID){
+    document.getElementById(pillID).remove();
+    filter.pop(pillID);
+    if (filter.length === 0) closePillMenu();
+}
+
+function closePillMenu(){
+    const pillMenu = document.getElementById("database-pill-box");
+    pillMenu.style.display = "none";
+}
 
 function selectStudent(id){
     selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
