@@ -8,13 +8,13 @@
         <p>{{file_id}}</p>
     {% endif %}
     <div class="database">
-        <div class="database-controls">
+        <div class="database-controls" id="database-controls">
             <div class="database-controls-left">
                 <div class="search-container text">
                     <input class="text" type="text">
                     <img class="search-icon" src="static\icons\icon-search.png" alt="Search Icon">
                 </div>
-                <div class="button secondary-button" onclick="openFilterMenu()">ADD FILTER</div>
+                <div class="button secondary-button" onclick="createPill('name', 'alyssa')">ADD FILTER</div>
             </div>
             <div class="database-controls-right">
                 <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
@@ -26,14 +26,7 @@
 
         <div class="database-pill-box" id="database-pill-box">
             <div class="database-filter-indicator">FILTERING ON: </div>
-            <div class="pill" id="ft/ptpt">
-                <div class="pill-content">FT/PT:PT</div>
-                <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('ft/ptpt')">
-            </div>
-            <div class="pill" id="fnamealyssa">
-                <div class="pill-content">FNAME:ALYSSA</div>
-                <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('fnamealyssa')">
-            </div>
+            <!-- pills go here -->
         </div>
 
         <div class="database-divider"></div>

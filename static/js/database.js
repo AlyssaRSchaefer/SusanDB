@@ -2,15 +2,23 @@ let sort = {}
 let columns = [];
 let selectedStudents = []; 
 let studentIDs = [];
-let filter = ['ft/ptpt', 'fnamealyssa'];
+let filter = [];
 let allStudentsSelected = false;
 
 function createPill(field, value){
+    pillID = field + "-" + value;
     const pill = document.createElement("div");
     pill.classList.add("pill");
-    pill.innerHTML = `<div class="pill-content">` + field.toUpperCase() + `:` + value.toUpperCase() + `</div><img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill(`+ field + value +`)"></img>`;
+    pill.id = pillID;
+    pill.innerHTML = `
+        <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()}</div>
+        <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('${pillID}')">
+    `;    
     let pillBox = document.getElementById("database-pill-box");
     pillBox.appendChild(pill);
+
+    if (filter.length === 0) openPillMenu();
+    filter.push(pillID);
 }
 
 function deletePill(pillID){
@@ -19,10 +27,22 @@ function deletePill(pillID){
     if (filter.length === 0) closePillMenu();
 }
 
+function openPillMenu(){
+    const pillMenu = document.getElementById("database-pill-box");
+    pillMenu.style.display = "flex";
+    
+    const databaseControls = document.getElementById("database-controls");
+    databaseControls.style.marginBottom = "12px"
+}
+
 function closePillMenu(){
     const pillMenu = document.getElementById("database-pill-box");
     pillMenu.style.display = "none";
+    
+    const databaseControls = document.getElementById("database-controls");
+    databaseControls.style.marginBottom = "25px"
 }
+
 
 function selectStudent(id){
     selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
