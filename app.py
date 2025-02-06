@@ -44,16 +44,15 @@ def greet():
 @app.route('/layout')
 def layout():
     return render_template('auxiliary/layout.html', 
-                           heading="Welcome to the Auxiliary Page", 
-                           back_link="/")
+                           heading="Layout", 
+                           back_link="/database")
 
 @app.route('/details')
 def details():
     selected_students = session.get('selected_students', [])
-    print(selected_students)
     students = get_students_by_ids(selected_students)
     return render_template('auxiliary/details.html',
-                           heading="Student Details",  # Assuming only one student
+                           heading=students[0]["name"],  # Assuming only one student
                            back_link="/database",
                            student=students)
 
@@ -62,7 +61,7 @@ def generate_report():
     selected_students = session.get('selected_students', [])
     students = get_students_by_ids(selected_students)
     return render_template('auxiliary/generate-report.html',
-                            heading = "Select a Template",
+                            heading = "Generate Report",
                             back_link="/database",
                             students = students)
 

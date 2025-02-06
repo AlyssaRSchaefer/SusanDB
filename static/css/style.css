@@ -31,13 +31,13 @@ body {
     border: none;
     outline: none;
     padding: 5px 5px;
-    border-radius: 2.5%;
+    border-radius: 5px;
     font-family: var(--font-secondary);
 }
 
 .button {
     padding: 5px 20px;
-    border-radius: 5%;
+    border-radius: 5px;
 }
 
 .button, .text {
@@ -47,7 +47,7 @@ body {
     white-space: nowrap;
 }
 
-.button:hover {
+.button:hover, .pill-icon {
     cursor: pointer;
 }
 
@@ -60,7 +60,7 @@ body {
     background-color: var(--primary-color-highlight);
 }
 
-.secondary-button, select {
+.secondary-button, .pill {
     background-color: var(--tertiary-color);
     color: var(--quarternary-color);
 }
@@ -69,6 +69,21 @@ body {
     background-color: var(--secondary-color-highlight);
 }
 
+.pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 5px;
+    margin: 2px;
+}
+
+.pill-icon {
+    height: 15px;
+    width: auto;
+    margin-left: 10px;
+}
 
 /* NAVIGATION BAR */
 .navbar {
@@ -175,7 +190,7 @@ body {
 .database-controls {
     display: flex;
     justify-content: space-between;
-    margin: 25px 0;
+    margin: 25px 0 12px 0;
 }
 
 .database-controls-left{
@@ -186,38 +201,6 @@ body {
 .database-controls-right{
     display: flex;
     justify-content: right;
-}
-
-.database-filter-menu {
-    position: relative;
-    top: 35px;
-    right: 125px;
-}
-
-.database-filter-select {
-    position: absolute;
-    border: none;
-    outline: none;
-    padding: 5px 5px;
-    border-radius: 2.5%;
-    font-family: var(--font-secondary);
-    margin-bottom: 2px;
-    width: 123px;
-    border-radius: 5%;
-    box-shadow: 
-        0 4px 8px rgba(0, 0, 0, 0.2),
-        0 6px 20px rgba(0, 0, 0, 0.19);
-}
-
-#database-filter-field-select {
-    top: 0;  
-    left: 0; 
-}
-
-/* Position the second select */
-#database-filter-value-select {
-    top: 35px; 
-    left: 0;   
 }
 
 .search-container {
@@ -289,6 +272,23 @@ td, th {
     height: auto;
     position: absolute;
     right: 5px;
+}
+
+.database a {
+    text-decoration: none;
+}
+
+.database-pill-box {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    margin: 12px 0;
+    padding: 0;
+    color: var(--quarternary-color);
+}
+
+.database-filter-indicator {
+    margin-right: 3px;
 }
 
 /* TEMPLATES PAGE */

@@ -75,6 +75,10 @@ function sortTableByField(field){
     fetchData(sort);
 }
 
+function applyFilter(){
+    // Need to change database control margin-bottom to 10px from 25px
+}
+
 function storeSelectedStudents(){
     return fetch('/store-selected-students', {  // Added "return" here
         method: 'POST',
