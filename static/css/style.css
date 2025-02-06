@@ -60,7 +60,7 @@ body {
     background-color: var(--primary-color-highlight);
 }
 
-.secondary-button {
+.secondary-button, select {
     background-color: var(--tertiary-color);
     color: var(--quarternary-color);
 }
@@ -186,6 +186,38 @@ body {
 .database-controls-right{
     display: flex;
     justify-content: right;
+}
+
+.database-filter-menu {
+    position: relative;
+    top: 35px;
+    right: 125px;
+}
+
+.database-filter-select {
+    position: absolute;
+    border: none;
+    outline: none;
+    padding: 5px 5px;
+    border-radius: 2.5%;
+    font-family: var(--font-secondary);
+    margin-bottom: 2px;
+    width: 123px;
+    border-radius: 5%;
+    box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.2),
+        0 6px 20px rgba(0, 0, 0, 0.19);
+}
+
+#database-filter-field-select {
+    top: 0;  
+    left: 0; 
+}
+
+/* Position the second select */
+#database-filter-value-select {
+    top: 35px; 
+    left: 0;   
 }
 
 .search-container {

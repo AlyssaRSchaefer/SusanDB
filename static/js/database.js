@@ -75,6 +75,47 @@ function sortTableByField(field){
     fetchData(sort);
 }
 
+function storeSelectedStudents(){
+    return fetch('/store-selected-students', {  // Added "return" here
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ selectedStudents: selectedStudents })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json(); // Ensure response is processed
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function openGenerateReportPage(){
+    if (selectedStudents.length === 0){
+        return;
+    }
+    
+    storeSelectedStudents()
+    .then(() => {
+        window.location.href = '/generate-report'; 
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function openDetailsPage(){
+    if (!(selectedStudents.length === 1)){
+        return;
+    }
+    
+    storeSelectedStudents()
+    .then(() => {
+        window.location.href = '/details'; 
+    })
+    .catch(error => console.error('Error:', error));
+}
+
 function fetchColumns() {
     const tableHeader = document.querySelector('table thead');
 

@@ -1,10 +1,11 @@
-from flask import Flask, g, render_template, jsonify, request
+from flask import Flask, g, session, render_template, jsonify, request
 import sqlite3
 import webview
 import threading
 
 app = Flask(__name__)
 app.config["DATABASE"] = "students.db"
+app.secret_key = 'key'
 
 @app.route('/')
 def index():
@@ -42,10 +43,38 @@ def greet():
 
 @app.route('/layout')
 def layout():
-    # Here, you pass the dynamic variables to the template
     return render_template('auxiliary/layout.html', 
                            heading="Welcome to the Auxiliary Page", 
-                           back_link="/")  # You can change this to any page you want
+                           back_link="/")
+
+@app.route('/details')
+def details():
+    selected_students = session.get('selected_students', [])
+    print(selected_students)
+    students = get_students_by_ids(selected_students)
+    return render_template('auxiliary/details.html',
+                           heading="Student Details",  # Assuming only one student
+                           back_link="/database",
+                           student=students)
+
+@app.route('/generate-report')
+def generate_report():
+    selected_students = session.get('selected_students', [])
+    students = get_students_by_ids(selected_students)
+    return render_template('auxiliary/generate-report.html',
+                            heading = "Select a Template",
+                            back_link="/database",
+                            students = students)
+
+@app.route('/store-selected-students', methods=['POST'])
+def store_selected_students():
+    data = request.json
+    selected_students = data.get('selectedStudents', [])
+    
+    # Store selected students in the session
+    session['selected_students'] = selected_students
+
+    return jsonify({"message": "Selected students stored in session"}), 200
 
 # Function to start Flask in a separate thread
 def start_flask():
@@ -107,6 +136,13 @@ def query_db(sort):
     result = [dict(row) for row in students]
     return result
 
+def get_students_by_ids(ids):
+    db = get_db()
+    placeholders = ",".join("?" for _ in ids)
+    query = f"SELECT * FROM students WHERE id IN ({placeholders})"
+    cursor = db.execute(query, ids)
+    students = [dict(row) for row in cursor.fetchall()]
+    return students
 
 
 # Main entry point
