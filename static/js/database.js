@@ -7,6 +7,7 @@ let allStudentsSelected = false;
 
 function createPill(field, value){
     pillID = field + "-" + value;
+    if (filter.includes(pillID)) return;
     const pill = document.createElement("div");
     pill.classList.add("pill");
     pill.id = pillID;
@@ -14,17 +15,20 @@ function createPill(field, value){
         <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()}</div>
         <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('${pillID}')">
     `;    
+    
     let pillBox = document.getElementById("database-pill-box");
     pillBox.appendChild(pill);
 
     if (filter.length === 0) openPillMenu();
     filter.push(pillID);
+    fetchData(sort, filter);
 }
 
 function deletePill(pillID){
     document.getElementById(pillID).remove();
-    filter.pop(pillID);
+    filter = filter.filter(item => item !== pillID);
     if (filter.length === 0) closePillMenu();
+    fetchData(sort, filter);
 }
 
 function openPillMenu(){
@@ -112,7 +116,7 @@ function sortTableByField(field){
     }
 
     updateSortUI(field);
-    fetchData(sort);
+    fetchData(sort, filter);
 }
 
 function applyFilter(){
@@ -189,7 +193,7 @@ function fetchColumns() {
 }
 
 
-function fetchData(sort = { name: 'ASC' }) {
+function fetchData(sort = { name: 'ASC' }, filter = []) {
     const table = document.querySelector('table tbody');
 
     fetch('/get_data', {
@@ -197,7 +201,7 @@ function fetchData(sort = { name: 'ASC' }) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ sort: sort })
+        body: JSON.stringify({ sort: sort, filter: filter })
     })
     .then(response => response.json())
     .then(data => {

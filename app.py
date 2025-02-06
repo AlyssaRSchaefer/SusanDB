@@ -110,9 +110,12 @@ def get_fields():
 def get_data():
     data = request.json
     sort = data.get('sort', {})
+    filter = data.get('filter', [])
+
     if not sort:
         sort = {'name': 'ASC'}
-    queried_data = query_db(sort)
+        
+    queried_data = query_db(sort, filter)
     return jsonify(queried_data)
 
 def get_field_order():
@@ -120,18 +123,28 @@ def get_field_order():
         fields = [line.strip() for line in f.readlines()]
     return fields
 
-def query_db(sort):
+def query_db(sort, filter_params):
     db = get_db()
     field_order = get_field_order()
 
     # Construct ORDER BY clause
     order_by_clauses = [f"{field} {direction}" for field, direction in sort.items()]
-    order_by_sql = ", ".join(order_by_clauses) if order_by_clauses else "id ASC"  # Default sort
+    order_by_sql = ", ".join(order_by_clauses) if order_by_clauses else "id ASC"
+
+    # Process filter parameters
+    filters = []
+    values = []
+    for param in filter_params:
+        field, value = param.split("-")  # Assuming format is "field-value"
+        filters.append(f"{field} = ?")
+        values.append(value)
+
+    where_clause = " AND ".join(filters) if filters else "1=1"  # Ensure valid WHERE clause
 
     # Construct the query
-    query = f"SELECT {', '.join(field_order)}, id FROM students ORDER BY {order_by_sql};"
+    query = f"SELECT {', '.join(field_order)}, id FROM students WHERE {where_clause} ORDER BY {order_by_sql};"
 
-    students = db.execute(query).fetchall()
+    students = db.execute(query, values).fetchall()
     result = [dict(row) for row in students]
     return result
 
