@@ -5,6 +5,29 @@ let studentIDs = [];
 let filter = [];
 let allStudentsSelected = false;
 
+/* FILTER LOGIC */
+function createFilter(){
+    const fieldSelect = document.getElementById("database-filter-field");
+    const valueSelect = document.getElementById("database-filter-value");
+    field = fieldSelect.value;
+    value = valueSelect.value;
+    createPill(field, value);
+    toggleFilterPopup();
+}
+
+function toggleFilterPopup() {
+    const popup = document.getElementById("database-filter-popup");
+    const database = document.getElementById("database");
+    
+    if (popup.style.display === "none" || popup.style.display === "") {
+        popup.style.display = "flex"; //
+        database.style.display = "none";
+    } else {
+        popup.style.display = "none";
+        database.style.display = "block";
+    }
+}
+
 function createPill(field, value){
     pillID = field + "-" + value;
     if (filter.includes(pillID)) return;
@@ -47,7 +70,7 @@ function closePillMenu(){
     databaseControls.style.marginBottom = "25px"
 }
 
-
+/* LOGIC TO HANDLE CHECKBOXES */
 function selectStudent(id){
     selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
     let rowID = "database-row-" + id;
@@ -81,6 +104,8 @@ function selectAll(){
         row.style.backgroundColor = newBackgroundColor;
     });
 }
+
+/* SORT LOGIC */
 
 function updateSortUI(field){
     let iconID = "database-icon-" + field;
@@ -119,10 +144,7 @@ function sortTableByField(field){
     fetchData(sort, filter);
 }
 
-function applyFilter(){
-    // Need to change database control margin-bottom to 10px from 25px
-}
-
+/* LOGIC TO SEND DATA TO OTHER PAGES */
 function storeSelectedStudents(){
     return fetch('/store-selected-students', {  // Added "return" here
         method: 'POST',
@@ -164,6 +186,7 @@ function openDetailsPage(){
     .catch(error => console.error('Error:', error));
 }
 
+/* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
     const tableHeader = document.querySelector('table thead');
 
@@ -192,7 +215,7 @@ function fetchColumns() {
     .catch(error => console.error('Error:', error));
 }
 
-
+/* LOGIC TO FETCH TABLE DATA */
 function fetchData(sort = { name: 'ASC' }, filter = []) {
     const table = document.querySelector('table tbody');
 
@@ -228,7 +251,57 @@ function fetchData(sort = { name: 'ASC' }, filter = []) {
     .catch(error => console.error('Error:', error));
 }
 
+async function populateFieldSelect() {
+    try {
+        const response = await fetch('/get_student_fields');
+        const fields = await response.json();
+        const select = document.getElementById("database-filter-field");
+        select.innerHTML = '<option value="">SELECT FIELD</option>';
+
+        fields.forEach(field => {
+            const option = document.createElement('option');
+            option.value = field;
+            option.textContent = field;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error fetching student fields:", error);
+    }
+}
+
+function populateValueSelect(selectedField) {
+    const select = document.getElementById("database-filter-value");
+
+    fetch('/get_field_values', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ field: selectedField }) // Corrected JSON key
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Clear previous options
+        select.innerHTML = '<option value="">SELECT VALUE</option>';
+
+        // Populate select options
+        data.forEach(value => {
+            const option = document.createElement("option");
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+    })
+    .catch(error => console.error('Error fetching field values:', error));
+}
+
+document.getElementById("database-filter-field").addEventListener("change", function() {
+    const selectedField = this.value;
+    populateValueSelect(selectedField);
+});
+
 window.onload = () => {
     fetchColumns();
     fetchData();
+    populateFieldSelect();
 };

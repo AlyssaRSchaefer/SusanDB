@@ -7,14 +7,14 @@
         <center><p>Hello {{name}}</p></center>
         <p>{{file_id}}</p>
     {% endif %}
-    <div class="database">
+    <div class="database" id="database">
         <div class="database-controls" id="database-controls">
             <div class="database-controls-left">
                 <div class="search-container text">
                     <input class="text" type="text">
                     <img class="search-icon" src="static\icons\icon-search.png" alt="Search Icon">
                 </div>
-                <div class="button secondary-button" onclick="createPill('name', 'Liam Smith')">ADD FILTER</div>
+                <div class="button secondary-button" onclick="toggleFilterPopup()">ADD FILTER</div>
             </div>
             <div class="database-controls-right">
                 <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
@@ -39,6 +39,19 @@
                 <tbody>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- FILTER POPUP -->
+    <div id="database-filter-popup" class="auxiliary">
+        <a onclick="toggleFilterPopup()" class="back-button"> <!-- Dynamic back link -->
+            <img src="static/icons/icon-back.png" alt="Back" class="back-icon">
+        </a>  
+        <div class="database-auxiliary-content">                     
+            <h1>NEW FILTER</h1>
+            <select class="select" name="field" id="database-filter-field"></select>
+            <select class="select" name="field" id="database-filter-value"></select>
+            <div class="confirm-button" onclick="createFilter()">CONFIRM</div>
         </div>
     </div>
 {% endblock %}

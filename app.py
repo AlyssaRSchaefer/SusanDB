@@ -9,9 +9,7 @@ app.secret_key = 'key'
 
 @app.route('/')
 def index():
-    return render_template('auxiliary/layout.html', 
-                           heading="Layout Heading", 
-                           back_link="/database")
+    return render_template("database.html")
 
 @app.route('/database')
 def database():
@@ -147,6 +145,23 @@ def query_db(sort, filter_params):
     students = db.execute(query, values).fetchall()
     result = [dict(row) for row in students]
     return result
+
+@app.route('/get_student_fields', methods=['GET'])
+def get_student_fields():
+    db = get_db()
+    cursor = db.execute("PRAGMA table_info(students);")
+    fields = [row[1] for row in cursor.fetchall()]
+    return jsonify(fields)
+
+@app.route('/get_field_values', methods=['POST'])
+def get_field_values():
+    data = request.json
+    field = data.get('field')
+    db = get_db()
+    query = f"SELECT DISTINCT {field} FROM students;"
+    cursor = db.execute(query)
+    values = [row[0] for row in cursor.fetchall()]  # Extract values
+    return jsonify(values)
 
 def get_students_by_ids(ids):
     db = get_db()
