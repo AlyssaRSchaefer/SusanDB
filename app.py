@@ -8,6 +8,10 @@ import threading
 from flask import Flask, render_template, request, session, redirect, url_for
 import secrets
 import tempfile
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from io import BytesIO
+import re
 
 from onedrive_utils import upload_new_file_no_duplicate, generate_share_id, list_shared_folder_contents, download_file, update_file, get_user_profile
 
@@ -28,10 +32,45 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
 
+# running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
+def run_at_login():
+    user_data = get_user_profile(session["access_token"])
+    session["name"] = user_data.get("displayName", "Unknown User")
+    
+    # sharing_url is stored in .env
+    sharing_url = os.getenv("SHARED_FOLDER_URL")
+    if not sharing_url:
+        return "No shared folder URL provided in environment variables."
+
+    # List the contents of the shared folder
+    folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
+    if folder_items is None:
+        return "Failed to list folder contents."
+    
+    # i.e. access has been denied
+    if folder_items[0] == 403:
+        return render_template("login.html", name=session["name"], access_denied=True)
+
+    target_filename = "students.db"
+    target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
+    if not target_file:
+        return f"File '{target_filename}' not found in the shared folder."
+    
+    # Find "report_templates.xlsx" in OneDrive
+    report_templates_file = next(
+        (item for item in folder_items if item.get("name") == "report_templates.xlsx"), None)
+
+    if not report_templates_file:
+        return "report_templates.xlsx not found in the 'report_templates' folder.", 404
+
+    session["report_templates_file_id"] = report_templates_file.get("id")
+
+    file_id = target_file.get("id")
+    session["database_file_id"] = file_id
+
 #################################################################################
 # App specific and routing logic
 #################################################################################
-
 
 # handles initial login logic
 @app.route('/login')
@@ -42,33 +81,10 @@ def login():
 
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
-
-            user_data = get_user_profile(session["access_token"])
-            name = user_data.get("displayName", "Unknown User")
-            
-            # sharing_url is stored in .env
-            sharing_url = os.getenv("SHARED_FOLDER_URL")
-            if not sharing_url:
-                return "No shared folder URL provided in environment variables."
-
-            # List the contents of the shared folder
-            folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
-            if folder_items is None:
-                return "Failed to list folder contents."
-            
-            # i.e. access has been denied
-            if folder_items[0] == 403:
-                return render_template("login.html", name=name, access_denied=True)
-
-            target_filename = "students.db"
-            target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
-            if not target_file:
-                return f"File '{target_filename}' not found in the shared folder."
-
-            file_id = target_file.get("id")
+            run_at_login()
 
             # Download the Excel file
-            file_content = download_file(session["access_token"], file_id)
+            file_content = download_file(session["access_token"], session["database_file_id"])
             if file_content is None:
                 return "Failed to download the Excel file from OneDrive."
             
@@ -97,7 +113,7 @@ def login():
             except Exception as e:
                 return f"Error reading database file: {e}"
             
-            return render_template("database.html", name=name, students=student_data, field_order=columns)
+            return render_template("database.html", name=session["name"], students=student_data, field_order=columns)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
@@ -128,52 +144,26 @@ def import_data():
 def templates():
     # Get the access token from the session (assumes the user is logged in)
     access_token = session.get("access_token")
-    
-    # Ensure that the access token exists
-    if not access_token:
-        return "User is not logged in or session expired."
-
-    # The shared folder URL (retrieved from environment variable or another method)
-    shared_folder_url = os.getenv("SHARED_FOLDER_URL")
-    
-    # List the contents of the shared folder
-    folder_items = list_shared_folder_contents(access_token, shared_folder_url)
-
-    # Check if the shared folder contains a 'report_templates' folder
-    report_templates_folder = None
-    for item in folder_items:
-        if item.get("name") == "report_templates" and item.get("folder"):
-            report_templates_folder = item
-            break
-
-    if not report_templates_folder:
-        return "report_templates folder not found in the shared OneDrive folder."
-
-    # Now list the contents of the 'report_templates' folder
-    folder_items = list_shared_folder_contents(access_token, report_templates_folder["webUrl"])
 
     templates_dict = {}
 
-    # Loop through the files in the 'report_templates' folder
-    for item in folder_items:
-        if item.get("name").endswith('.txt') and item.get("file"):
-            template_name = item.get("name").split('.')[0]  # Remove .txt extension
-            file_id = item.get("id")
+    # Download the Excel file from OneDrive
+    file_content = download_file(access_token, session["report_templates_file_id"])
+    if not file_content:
+        return "Failed to download the existing Excel file.", 500
 
-            # Download the file content (it will be the template fields)
-            file_content = download_file(access_token, file_id)
-            if not file_content:
-                continue
+    # Load the existing Excel file into memory
+    excel_file = BytesIO(file_content)
+    wb = load_workbook(excel_file)
+    ws = wb.active
 
-            # Read the file content and split it into fields (each line)
-            fields = file_content.decode('utf-8').splitlines()
+    # Loop through the rows in the Excel file and extract template fields
+    for row in ws.iter_rows(min_row=2):  # Skip the header row
+        template_name = row[0].value.upper()  # Assuming the template name is in the first column (A)
+        fields = [cell.value.upper() for cell in row[1:] if cell.value]  # Extract subsequent columns (B, C, etc.)
 
-            # Add the template name and its fields to the dictionary
+        if template_name and fields:
             templates_dict[template_name] = fields
-
-    # If no templates are found, return a message
-    if not templates_dict:
-        return "No templates found in the 'report_templates' folder."
 
     # Pass the dictionary to the template
     return render_template('templates.html', templates_dict=templates_dict)
@@ -192,7 +182,6 @@ def new_template():
         if not template_name or not selected_columns:
             return {"error": "Template name and columns are required."}, 400
 
-        
         access_token = session.get("access_token")
         if not access_token:
             return {"error": "User not authenticated. Please log in."}, 401
@@ -203,32 +192,125 @@ def new_template():
         if not folder_items:
             return {"error": "Failed to retrieve shared folder contents."}, 500
 
-        # Find "report_templates" folder
-        report_templates_folder = next((item for item in folder_items if item.get("name") == "report_templates"), None)
-        if not report_templates_folder:
-            return {"error": "report_templates folder not found in OneDrive."}, 404
+        # Find "report_templates.xlsx" in OneDrive
+        report_templates_file = next(
+            (item for item in folder_items if item.get("name") == "report_templates.xlsx"), None)
 
-        report_templates_folder_id = report_templates_folder.get("id")
-        # Create the template file content
-        file_content = "\n".join(selected_columns)  # Each column in a new line
+        if not report_templates_file:
+            return {"error": "report_templates.xlsx not found in OneDrive."}, 404
 
-        # Save file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_file:
-            temp_file.write(file_content.encode("utf-8"))
-            temp_file_path = temp_file.name
+        report_templates_file_id = report_templates_file.get("id")
 
-        # Upload the file to OneDrive inside report_templates
-        file_name = f"{template_name}.txt"
-        upload_success = upload_new_file_no_duplicate(access_token, temp_file_path, file_name, report_templates_folder_id)
+        # Download the current Excel file from OneDrive
+        file_content = download_file(access_token, report_templates_file_id)
+        if not file_content:
+            return {"error": "Failed to download the existing Excel file."}, 500
 
-        # Remove temporary file
-        os.remove(temp_file_path)
+        # Load the existing Excel file into memory
+        excel_file = BytesIO(file_content)
+        wb = load_workbook(excel_file)
+        ws = wb.active
 
-        if upload_success[0]:
-            return {"message": "Template created successfully."}, 201
+        # Find the next available row for appending the data
+        next_row = ws.max_row + 1
+
+        # First column will be the template name
+        ws[f"A{next_row}"] = template_name
+
+        # Populate the selected columns in the subsequent columns
+        for i, column in enumerate(selected_columns, start=2):  # Start at column B
+            ws[f"{get_column_letter(i)}{next_row}"] = column
+
+        # Save the workbook back to memory
+        excel_file_output = BytesIO()
+        wb.save(excel_file_output)
+        excel_file_output.seek(0)
+
+        # Upload the modified Excel file back to OneDrive
+        upload_success = update_file(
+            access_token, report_templates_file_id, excel_file_output)
+
+        if upload_success:
+            return {"message": "Template appended successfully."}, 201
         else:
-            return {"error": upload_success[1]}, 500
+            return {"error": "Error, please try again"}, 500
 
+# Normalize function: convert to lowercase and replace spaces with underscores
+def normalize_name(name):
+    return re.sub(r"\s+", "_", name.lower()) if name else None
+
+@app.route('/api/update_template', methods=['POST'])
+def update_template_api():
+    data = request.json
+    template_name = data.get("name")  # Template name to update
+    updated_columns = data.get("columns")  # New column order
+
+    if not template_name or not updated_columns:
+        return {"error": "Template name and updated columns are required."}, 400
+
+    access_token = session.get("access_token")
+    if not access_token:
+        return {"error": "User not authenticated. Please log in."}, 401
+
+    # Retrieve shared folder contents
+    sharing_url = os.getenv("SHARED_FOLDER_URL")
+    folder_items = list_shared_folder_contents(access_token, sharing_url)
+    if not folder_items:
+        return {"error": "Failed to retrieve shared folder contents."}, 500
+
+    # Find "report_templates.xlsx" in OneDrive
+    report_templates_file = next(
+        (item for item in folder_items if item.get("name") == "report_templates.xlsx"), None)
+
+    if not report_templates_file:
+        return {"error": "report_templates.xlsx not found in OneDrive."}, 404
+
+    report_templates_file_id = report_templates_file.get("id")
+
+    # Download the current Excel file from OneDrive
+    file_content = download_file(access_token, report_templates_file_id)
+    if not file_content:
+        return {"error": "Failed to download the existing Excel file."}, 500
+
+    # Load the Excel file into memory
+    excel_file = BytesIO(file_content)
+    wb = load_workbook(excel_file)
+    ws = wb.active
+
+    # Find the row with the given template name
+    template_row = None
+    normalized_template_name = normalize_name(template_name)
+
+    for row in range(2, ws.max_row + 1):  # Skip header row
+        cell_value = normalize_name(ws[f"A{row}"].value)
+        if cell_value == normalized_template_name:
+            template_row = row
+            break
+
+    if not template_row:
+        return {"error": "Template not found in the Excel file."}, 404
+
+    # Clear the entire row (except template name in column A)
+    for col in range(2, ws.max_column + 1):  # Start from column B
+        ws[f"{get_column_letter(col)}{template_row}"] = None
+
+    # Insert new attributes in the cleared row
+    for i, column in enumerate(updated_columns, start=2):  # Start at column B
+        ws[f"{get_column_letter(i)}{template_row}"] = column
+
+    # Save the updated workbook back to memory
+    excel_file_output = BytesIO()
+    wb.save(excel_file_output)
+    excel_file_output.seek(0)
+
+    # Upload the modified Excel file back to OneDrive
+    upload_success = update_file(access_token, report_templates_file_id, excel_file_output)
+
+    if upload_success:
+        return {"message": "Template updated successfully."}, 200
+    else:
+        return {"error": "Error updating the template. Please try again."}, 500
+ 
 #################################################################################
 # Functions to initiate app
 #################################################################################

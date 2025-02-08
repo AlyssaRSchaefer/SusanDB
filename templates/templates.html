@@ -20,11 +20,9 @@
           </thead>
           <tbody>
             {% for template_name, _ in templates_dict.items() %}
-              <tr>
+              <tr class="template-selectable-row" onclick="loadTemplateFields('{{ template_name }}')">
                 <td>
-                  <a href="javascript:void(0)" class="template-link" onclick="loadTemplateFields('{{ template_name }}')" style="text-decoration: none;">
-                    {{ template_name }}
-                  </a>
+                  <span class="template-name">{{ template_name }}</span>
                   <span class="templates-delete-icon">🗑️</span>
                 </td>
               </tr>
@@ -38,6 +36,9 @@
       <div class="templates-controls">
         <div class="templates-controls-left">
           <div class="button primary-button">NEW FIELD</div>
+          <div id="save-fields-btn" class="button primary-button" style="display: none;" onclick="saveTemplateChanges()">
+            SAVE CHANGES
+          </div>
         </div>
       </div>
       <div class="templates-divider"></div>
@@ -48,7 +49,7 @@
               <th id="template-name-header">FIELDS</th>
             </tr>
           </thead>
-          <tbody id="template-fields-body">
+          <tbody id="template-fields-body"  class="sortable">
             <!-- Fields will be loaded here dynamically -->
           </tbody>
         </table>
@@ -56,37 +57,86 @@
     </div>
   </div>
 
-  <script>
-    const templatesDict = JSON.parse('{{ templates_dict | tojson }}');
-    
-    function loadTemplateFields(templateName) {
-        // Remove 'selected' class from all rows
-        const allTemplateLinks = document.querySelectorAll('.template-link');
-        allTemplateLinks.forEach(link => link.parentElement.classList.remove('.template-selected'));
+ <script>
+  const templatesDict = JSON.parse('{{ templates_dict | tojson }}');
+  let currentTemplate = null;
+  let hasChanges = false;
+  let sortableInstance = null;
 
-        // Add 'selected' class to the clicked template row
-        const selectedLink = document.querySelector(`a[onclick="loadTemplateFields('${templateName}')"]`);
-        selectedLink.parentElement.classList.add('.templateselected');
+  function loadTemplateFields(templateName) {
+    currentTemplate = templateName;
+    const fields = [...templatesDict[templateName]]; // Make a copy of the fields
+    document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
 
-        const fields = templatesDict[templateName];
+    const fieldsBody = document.getElementById('template-fields-body');
+    fieldsBody.innerHTML = ''; // Clear existing fields
 
-        // Update the header with the template name
-        document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
+    // Loop through fields to create rows with a delete icon
+    fields.forEach(field => {
+        const row = document.createElement('tr');
 
-        // Clear existing fields
-        const fieldsBody = document.getElementById('template-fields-body');
-        fieldsBody.innerHTML = '';
+        // Create a cell for the field name
+        const fieldCell = document.createElement('td');
+        fieldCell.classList.add('drag-handle');
+        fieldCell.textContent = field;
+        
+        // Append both the field cell and the delete icon cell to the row
+        row.appendChild(fieldCell);
+        
+        // Append the row to the body of the table
+        fieldsBody.appendChild(row);
+    });
 
-        // Add new rows for fields
-        fields.forEach(field => {
-            const row = document.createElement('tr');
-            const cell = document.createElement('td');
-            cell.textContent = field;
-            cell.style.textAlign = 'center';
-            row.appendChild(cell);
-            fieldsBody.appendChild(row);
-        });
+    // Reinitialize Sortable after loading new fields
+    if (sortableInstance) {
+        sortableInstance.destroy(); // Destroy the old instance to prevent duplication
     }
 
-  </script>
+    sortableInstance = new Sortable(fieldsBody, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: function () {
+            hasChanges = true; // Mark as changed
+            document.getElementById('save-fields-btn').style.display = 'inline-block'; // Show save button
+        }
+    });
+
+    // Initially hide the save button when there are no changes
+    document.getElementById('save-fields-btn').style.display = 'none';
+}
+
+function saveTemplateChanges() {
+    const fields = [];
+    document.querySelectorAll("#template-fields-body tr td:first-child").forEach(td => {
+        const fieldName = td.textContent.trim(); // Get field name, excluding the trash icon
+        if (fieldName) fields.push(fieldName);
+    });
+
+    templatesDict[currentTemplate] = fields
+
+    fetch("/api/update_template", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name: currentTemplate,
+            columns: fields
+        })
+    }).then(response => response.json()).then(data => {
+        if (data.message) {
+            alert("Template updated successfully!");
+            hasChanges = false; // Reset change flag after save
+            document.getElementById('save-fields-btn').style.display = 'none'; // Hide save button
+        } else {
+            alert("Error updating template.");
+        }
+    }).catch(error => {
+        console.error("Error:", error);
+    });
+}
+</script>
+
+  
+
 {% endblock %}
