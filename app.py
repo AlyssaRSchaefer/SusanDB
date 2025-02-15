@@ -82,6 +82,7 @@ def login():
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
+            
 
             # Download the Excel file
             file_content = download_file(session["access_token"], session["database_file_id"])
@@ -142,6 +143,9 @@ def import_data():
 
 @app.route('/templates')
 def templates():
+    #TODO: LOAD IN DYNAMICALLY
+    all_fields = ['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
+
     # Get the access token from the session (assumes the user is logged in)
     access_token = session.get("access_token")
 
@@ -166,7 +170,7 @@ def templates():
             templates_dict[template_name] = fields
 
     # Pass the dictionary to the template
-    return render_template('templates.html', templates_dict=templates_dict)
+    return render_template('templates.html', templates_dict=templates_dict, all_fields = all_fields)
 
 @app.route('/new_template', methods=['GET', 'POST'])
 def new_template():
@@ -310,7 +314,74 @@ def update_template_api():
         return {"message": "Template updated successfully."}, 200
     else:
         return {"error": "Error updating the template. Please try again."}, 500
- 
+
+@app.route('/api/delete_template', methods=['POST'])
+def delete_template_api():
+    data = request.json
+    template_name = data.get("name")  # Template name to delete
+
+    if not template_name:
+        return {"error": "Template name is required."}, 400
+
+    access_token = session.get("access_token")
+    if not access_token:
+        return {"error": "User not authenticated. Please log in."}, 401
+
+    # Retrieve shared folder contents
+    sharing_url = os.getenv("SHARED_FOLDER_URL")
+    folder_items = list_shared_folder_contents(access_token, sharing_url)
+    if not folder_items:
+        return {"error": "Failed to retrieve shared folder contents."}, 500
+
+    # Find "report_templates.xlsx" in OneDrive
+    report_templates_file = next(
+        (item for item in folder_items if item.get("name") == "report_templates.xlsx"), None)
+
+    if not report_templates_file:
+        return {"error": "report_templates.xlsx not found in OneDrive."}, 404
+
+    report_templates_file_id = report_templates_file.get("id")
+
+    # Download the current Excel file from OneDrive
+    file_content = download_file(access_token, report_templates_file_id)
+    if not file_content:
+        return {"error": "Failed to download the existing Excel file."}, 500
+
+    # Load the Excel file into memory
+    excel_file = BytesIO(file_content)
+    wb = load_workbook(excel_file)
+    ws = wb.active
+
+    # Find the row with the given template name
+    template_row = None
+    normalized_template_name = normalize_name(template_name)
+
+    for row in range(2, ws.max_row + 1):  # Skip header row
+        cell_value = normalize_name(ws[f"A{row}"].value)
+        if cell_value == normalized_template_name:
+            template_row = row
+            break
+
+    if not template_row:
+        return {"error": "Template not found in the Excel file."}, 404
+
+    # Delete the entire row with the template (shift everything up)
+    ws.delete_rows(template_row)
+
+    # Save the updated workbook back to memory
+    excel_file_output = BytesIO()
+    wb.save(excel_file_output)
+    excel_file_output.seek(0)
+
+    # Upload the modified Excel file back to OneDrive
+    upload_success = update_file(access_token, report_templates_file_id, excel_file_output)
+
+    if upload_success:
+        return {"message": "Template deleted successfully."}, 200
+    else:
+        return {"error": "Error deleting the template. Please try again."}, 500
+
+
 #################################################################################
 # Functions to initiate app
 #################################################################################
