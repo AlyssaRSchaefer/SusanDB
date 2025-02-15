@@ -118,6 +118,9 @@ function loadTemplateFields(templateName, from_field = false) {
             return; // Stop the template loading if the user cancels
         } else {
             hasChanges = false;
+            templatesDict[currentTemplate] = [...originalTemplatesDict[currentTemplate]]; // Restore from original
+            document.getElementById('save-fields-btn').style.display = 'none';
+            document.getElementById('revert-fields-btn').style.display = 'none';
         }
     }
 
@@ -299,6 +302,8 @@ function addNewField() {
         templatesDict[currentTemplate].push(normalizedSelectedField);
         loadTemplateFields(currentTemplate, from_field=true); // Reload the template fields
         hasChanges = true;
+        document.getElementById('save-fields-btn').style.display = 'inline-block';
+        document.getElementById('revert-fields-btn').style.display = 'inline-block';
     } else {
         alert("Field already exists in the template.");
     }
