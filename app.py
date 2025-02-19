@@ -170,11 +170,7 @@ def database():
 def import_data():
     return render_template('import.html')
 
-@app.route('/templates')
-def templates():
-    #TODO: LOAD IN DYNAMICALLY
-    all_fields = ['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
-
+def get_templates():
     # Get the access token from the session (assumes the user is logged in)
     access_token = session.get("access_token")
 
@@ -197,7 +193,27 @@ def templates():
 
         if template_name and fields:
             templates_dict[template_name] = fields
+    
+    return templates_dict
 
+def get_all_fields():
+    all_fields=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
+    return all_fields
+
+@app.route('/generate_report')
+def generate_report():
+    #TODO: LOAD IN DYNAMICALLY
+    all_fields = get_all_fields()
+    templates_dict = get_templates()
+
+    return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
+
+@app.route('/templates')
+def templates():
+    #TODO: LOAD IN DYNAMICALLY
+    all_fields = get_all_fields()
+    templates_dict = get_templates()
+    
     # Pass the dictionary to the template
     return render_template('templates.html', templates_dict=templates_dict, all_fields = all_fields)
 

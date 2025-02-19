@@ -146,6 +146,7 @@ body {
 
 .auxiliary-content {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     background-color: var(--secondary-color-highlight);
@@ -438,6 +439,10 @@ td, th {
     padding: 5px;
   }
 
+  .popup-button:hover {
+    cursor: pointer;
+  }
+
   .templates-select {
     border: none;
     outline: none;
@@ -526,3 +531,58 @@ td, th {
     justify-content: space-between;
     margin: 10px 0;
 }
+
+/* GENERATE REPORT PAGE */
+
+#generate-report-title {
+    margin: 20px;
+}
+
+@media (max-height: 700px) {
+    #generate-report-title {
+        font-size:xx-large;
+    }
+}
+
+  /* Initially, the selector container will be centered in the body content */
+  #generate-report-template-selector {
+    margin-top: 50px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 10px;
+    text-align: center;
+    transition: margin-top 0.5s ease, all 0.5s ease;
+    max-width: 800px;
+  }
+  /* After confirmation, slide it to the top of the body (just below the header) 
+     and change layout to horizontal */
+  #generate-report-template-selector.confirmed {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    text-align: left;
+    background-color: var(--secondary-color);
+    padding: 30px;
+    border-radius: 7px;
+  }
+
+  #template-confirm-button.confirmed {
+    background-color: var(--secondary-color-highlight);
+    color: var(--quarternary-color);
+    border: 1px solid var(--primary-color);
+    margin: auto;
+  }
+
+  .generate-report-templates-section {
+    flex: 1; 
+    min-width: 70%; /* Prevents sections from becoming too narrow */
+    margin: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+    margin-top: 0;
+}
+
