@@ -47,10 +47,10 @@
       </div>
     </div>
 
-    <div class="templates-section">
+    <div class="templates-section" id="fields-section" style="display: none;">
       <div class="templates-controls">
         <div class="templates-controls-left">
-          <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()" style="opacity: 0">NEW FIELD</div>
+          <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
         </div>
       </div>
       <div class="templates-divider"></div>
@@ -173,7 +173,7 @@ function loadTemplateFields(templateName, from_field = false) {
     });
 
     // Initially hide the save button when there are no changes
-    document.getElementById('new-field-btn').style.opacity = 1;
+    document.getElementById('fields-section').style.display = "flex";
 }
 
 function confirmDeleteField(fieldName) {
