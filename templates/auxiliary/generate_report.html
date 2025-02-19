@@ -74,7 +74,7 @@
     if (selectedValue) {
       // If switching templates and there are unsaved changes, confirm with the user
       if (currentTemplate && hasChanges) {
-        const userConfirmed = confirm("Awitching will erase changes made. Are you sure you want to switch templates?");
+        const userConfirmed = confirm("Switching will erase changes made. Are you sure you want to switch templates?");
         if (!userConfirmed) {
           return;
         } else {
@@ -126,6 +126,7 @@
       templatesDict[currentTemplate].push(normalizedSelectedField);
       loadTemplateFields(currentTemplate, true); // Reload fields (from a field addition)
       hasChanges = true;
+      document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
       document.getElementById('revert-fields-btn').style.display = 'inline-block';
     } else {
       alert("Field already exists in the template.");
@@ -188,6 +189,7 @@
       onEnd: function () {
         hasChanges = true;
         document.getElementById('revert-fields-btn').style.display = 'inline-block';
+        document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
       }
     });
     // Show the fields section (if not already visible)
@@ -203,6 +205,7 @@
       hasChanges = false;
       loadTemplateFields(currentTemplate, true);
       document.getElementById('revert-fields-btn').style.display = 'none';
+      document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
     }
   }
 
@@ -219,6 +222,7 @@
       loadTemplateFields(currentTemplate, true);
       hasChanges = true;
       document.getElementById('revert-fields-btn').style.display = 'inline-block';
+      document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
     }
   }
 
