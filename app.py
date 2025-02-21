@@ -13,7 +13,7 @@ from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
 
-from onedrive_utils import upload_new_file_no_duplicate, generate_share_id, list_shared_folder_contents, download_file, update_file, get_user_profile
+from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
@@ -28,6 +28,8 @@ CLIENT_ID = os.getenv("CLIENT_ID")
 AUTHORITY = os.getenv("AUTHORITY")
 SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
 REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
+STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
+REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
@@ -36,37 +38,6 @@ if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
 def run_at_login():
     user_data = get_user_profile(session["access_token"])
     session["name"] = user_data.get("displayName", "Unknown User")
-    
-    # sharing_url is stored in .env
-    sharing_url = os.getenv("SHARED_FOLDER_URL")
-    if not sharing_url:
-        return "No shared folder URL provided in environment variables."
-
-    # List the contents of the shared folder
-    folder_items = list_shared_folder_contents(session["access_token"], sharing_url)
-    if folder_items is None:
-        return "Failed to list folder contents."
-    
-    # i.e. access has been denied
-    if folder_items[0] == 403:
-        return render_template("login.html", name=session["name"], access_denied=True)
-
-    target_filename = "students.db"
-    target_file = next((item for item in folder_items if item.get("name") == target_filename), None)
-    if not target_file:
-        return f"File '{target_filename}' not found in the shared folder."
-    
-    # Find "report_templates.xlsx" in OneDrive
-    report_templates_file = next(
-        (item for item in folder_items if item.get("name") == "report_templates.xlsx"), None)
-
-    if not report_templates_file:
-        return "report_templates.xlsx not found in the 'report_templates' folder.", 404
-
-    session["report_templates_file_id"] = report_templates_file.get("id")
-
-    file_id = target_file.get("id")
-    session["database_file_id"] = file_id
 
 #################################################################################
 # App specific and routing logic
@@ -83,12 +54,8 @@ def login():
             session["access_token"] = result.get("access_token")
             run_at_login()
             
+            file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
 
-            # Download the Excel file
-            file_content = download_file(session["access_token"], session["database_file_id"])
-            if file_content is None:
-                return "Failed to download the Excel file from OneDrive."
-            
             try:
                 # Save the database file to a temporary location
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
@@ -103,18 +70,14 @@ def login():
                 cursor.execute("SELECT * FROM students")
                 rows = cursor.fetchall()
 
-                # Get column names
                 columns = [desc[0] for desc in cursor.description]
-
-                # Convert to dictionary format
                 student_data = [dict(zip(columns, row)) for row in rows]
 
-                # Close connection
                 conn.close()
             except Exception as e:
                 return f"Error reading database file: {e}"
             
-            return render_template("database.html", name=session["name"], students=student_data, field_order=columns)
+            return render_template("database.html", students=student_data, field_order=columns)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
@@ -135,7 +98,7 @@ def index():
 @app.route('/database')
 def database():
     # Download the Excel file
-    file_content = download_file(session["access_token"], session["database_file_id"])
+    file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
     if file_content is None:
         return "Failed to download the Excel file from OneDrive."
     
@@ -171,13 +134,10 @@ def import_data():
     return render_template('import.html')
 
 def get_templates():
-    # Get the access token from the session (assumes the user is logged in)
-    access_token = session.get("access_token")
-
     templates_dict = {}
 
     # Download the Excel file from OneDrive
-    file_content = download_file(access_token, session["report_templates_file_id"])
+    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
     if not file_content:
         return "Failed to download the existing Excel file.", 500
 
@@ -236,7 +196,7 @@ def new_template():
             return {"error": "User not authenticated. Please log in."}, 401
 
         # Download the current Excel file from OneDrive
-        file_content = download_file(access_token, session["report_templates_file_id"])
+        file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
         if not file_content:
             return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -261,8 +221,8 @@ def new_template():
         excel_file_output.seek(0)
 
         # Upload the modified Excel file back to OneDrive
-        upload_success = update_file(
-            access_token, session["report_templates_file_id"], excel_file_output)
+        upload_success = update_file_from_share_url(
+            access_token, REPORT_TEMPLATE_URL, excel_file_output)
 
         if upload_success:
             return {"message": "Template appended successfully."}, 201
@@ -287,7 +247,7 @@ def update_template_api():
         return {"error": "User not authenticated. Please log in."}, 401
 
     # Download the current Excel file from OneDrive
-    file_content = download_file(access_token, session["report_templates_file_id"])
+    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
     if not file_content:
         return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -323,7 +283,7 @@ def update_template_api():
     excel_file_output.seek(0)
 
     # Upload the modified Excel file back to OneDrive
-    upload_success = update_file(access_token, session["report_templates_file_id"], excel_file_output)
+    upload_success = update_file_from_share_url(access_token, REPORT_TEMPLATE_URL, excel_file_output)
 
     if upload_success:
         return {"message": "Template updated successfully."}, 200
@@ -343,7 +303,7 @@ def delete_template_api():
         return {"error": "User not authenticated. Please log in."}, 401
 
     # Download the current Excel file from OneDrive
-    file_content = download_file(access_token, session["report_templates_file_id"])
+    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
     if not file_content:
         return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -374,7 +334,7 @@ def delete_template_api():
     excel_file_output.seek(0)
 
     # Upload the modified Excel file back to OneDrive
-    upload_success = update_file(access_token, session["report_templates_file_id"], excel_file_output)
+    upload_success = update_file_from_share_url(access_token, REPORT_TEMPLATE_URL, excel_file_output)
 
     if upload_success:
         return {"message": "Template deleted successfully."}, 200
