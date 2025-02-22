@@ -26,7 +26,8 @@ def create_db():
         ("Liam Smith", 15, 10, "Physics", "liam.smith@example.com", 3.6, "Debate Club"),
         ("Olivia Martinez", 17, 12, "Biology", "olivia.martinez@example.com", 4.0, "Science Olympiad"),
         ("Noah Brown", 16, 11, "Computer Science", "noah.brown@example.com", 3.9, "Coding Club"),
-        ("Ava Davis", 15, 10, "History", "ava.davis@example.com", 3.7, "Drama Club")
+        ("Ava Davis", 15, 10, "History", "ava.davis@example.com", 3.7, "Drama Club"),
+        ("Maura Davis", 14, 9, "History", "maura.davis@example.com", 3.7, "Drama Club")
     ]
 
     cursor.executemany('''

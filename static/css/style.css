@@ -31,13 +31,13 @@ body {
     border: none;
     outline: none;
     padding: 5px 5px;
-    border-radius: 2.5%;
+    border-radius: 5px;
     font-family: var(--font-secondary);
 }
 
 .button {
     padding: 5px 20px;
-    border-radius: 5%;
+    border-radius: 5px;
 }
 
 .button, .text {
@@ -47,20 +47,21 @@ body {
     white-space: nowrap;
 }
 
-.button:hover {
+.button:hover, .pill-icon {
     cursor: pointer;
 }
 
-.primary-button {
+.primary-button, .confirm-button {
     background-color: var(--primary-color);
     color: var(--tertiary-color)
 }
 
-.primary-button:hover {
+.primary-button:hover, .confirm-button:hover {
     background-color: var(--primary-color-highlight);
+    cursor: pointer;
 }
 
-.secondary-button {
+.secondary-button, .pill {
     background-color: var(--tertiary-color);
     color: var(--quarternary-color);
 }
@@ -69,6 +70,46 @@ body {
     background-color: var(--secondary-color-highlight);
 }
 
+.pill {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap;
+    padding: 3px 10px;
+    border-radius: 5px;
+    margin: 2px;
+}
+
+.pill-icon {
+    height: 15px;
+    width: auto;
+    margin-left: 10px;
+}
+
+.confirm-button {
+    text-align: center;
+    padding: 5px 60px;
+}
+
+.confirm-button, .select {
+    margin: 5px;
+    width: 400px;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.select {
+    padding: 5px;
+    text-align: left;
+    font: var(--font-secondary);
+    appearance: none;
+    border: none;
+}
+
+.select:focus {
+    border: 2px solid var(--primary-color);
+    outline: none;
+}
 
 /* NAVIGATION BAR */
 .navbar {
@@ -134,7 +175,7 @@ body {
   }
 
 /* MULTIPLE PAGES */
-.database, .import, .templates, .auxiliary-content {
+.database, .import, .templates, .auxiliary-content, .database-auxiliary-content {
     margin: 0 var(--horizontal-margin);
 }
 
@@ -208,6 +249,14 @@ body {
     background-color: var(--tertiary-color);
 }
 
+.database-table-container { 
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-color: var(--secondary-color-highlight) var(--secondary-color);
+    scrollbar-width: thin;
+}
+
 .database-table {
     width: 100%;
     color: var(--quarternary-color);
@@ -232,10 +281,59 @@ body {
     background-color: var(--secondary-color-highlight);
 }
 
+.database-column-name:hover {
+    background-color: var(--secondary-color-highlight);
+}
+
 td, th {
+    width: 150px;
     border: none;
-    padding: 15px 10px;
+    padding: 20px 25px;
     text-align: center;
+    position: relative;
+}
+
+.database-sort-icon {
+    display: none;
+    width: 20px;
+    height: auto;
+    position: absolute;
+    right: 5px;
+}
+
+.database a {
+    text-decoration: none;
+}
+
+.database-pill-box {
+    display: none;
+    justify-content: left;
+    align-items: center;
+    margin: 12px 0;
+    padding: 0;
+    color: var(--quarternary-color);
+}
+
+.database-filter-indicator {
+    margin-right: 3px;
+}
+
+#database-filter-popup {
+    display: none;
+}
+
+.database-auxiliary-content {
+    display: flex;
+    flex-direction: column; /* Keeps elements stacked vertically */
+    align-items: center; /* Centers horizontally */
+    justify-content: center; /* Centers vertically */
+    width: 100%;
+    background-color: var(--secondary-color-highlight);
+    min-height: calc(100vh - var(--navbar-height));
+}
+
+.database-auxiliary-content h1 {
+    margin-bottom: 15px;
 }
 
 /* TEMPLATES PAGE */

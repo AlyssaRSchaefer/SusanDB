@@ -3,6 +3,10 @@
 {% block title %}Database Page{% endblock %}
 
 {% block content %}
+    {% if name %}
+        <center><p>Hello {{name}}</p></center>
+        <p>{{file_id}}</p>
+    {% endif %}
     <div class="database">
         <div class="database-controls">
             <div class="database-controls-left">
@@ -10,33 +14,48 @@
                     <input class="text" type="text">
                     <img class="search-icon" src="static\icons\icon-search.png" alt="Search Icon">
                 </div>
-                <div class="button secondary-button">ADD FILTER</div>
+                <div class="button secondary-button" onclick="toggleFilterPopup()">ADD FILTER</div>
             </div>
             <div class="database-controls-right">
-                <div class="button secondary-button">DETAILS</div>
-                <div class="button secondary-button">LAYOUT</div>
+                <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
+                <a href="{{ url_for('layout') }}"><div class="button secondary-button">LAYOUT</div></a>
                 <div class="button secondary-button">EDIT DATABASE</div>
-                <div class="button primary-button">GENERATE REPORT</div>
+                <div class="button primary-button" onclick="openGenerateReportPage()">GENERATE REPORT</div>
             </div>
         </div>
+
+        <div class="database-pill-box" id="database-pill-box">
+            <div class="database-filter-indicator">FILTERING ON: </div>
+            <!-- pills go here -->
+        </div>
+
         <div class="database-divider"></div>
-        <table class="database-table">
-            <thead>
-                <tr class="database-head">
-                    {% for field in field_order %}
-                    <th>{{ field.replace('_', ' ').title() }}</th>  <!-- Format header names -->
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
-                <tr>
-                    {% for field in field_order %}
-                    <td>{{ student[field] }}</td>  <!-- Access field dynamically -->
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="database-table-container">
+            <table class="database-table">
+                <thead>
+                    <tr class="database-head">
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    <!-- FILTER POPUP -->
+    <div id="database-filter-popup" class="auxiliary">
+        <a onclick="toggleFilterPopup()" class="back-button"> <!-- Dynamic back link -->
+            <img src="static/icons/icon-back.png" alt="Back" class="back-icon">
+        </a>  
+        <div class="database-auxiliary-content">                     
+            <h1>NEW FILTER</h1>
+            <select class="select" name="field" id="database-filter-field"></select>
+            <select class="select" name="field" id="database-filter-value"></select>
+            <div class="confirm-button" onclick="createFilter()">CONFIRM</div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script src="static/js/database.js"></script>  <!-- Default script -->
 {% endblock %}
