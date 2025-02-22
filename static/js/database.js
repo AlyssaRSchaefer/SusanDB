@@ -19,8 +19,8 @@ searchTerm.addEventListener("keydown", function(event){
 function createFilter(){
     const fieldSelect = document.getElementById("database-filter-field");
     const valueSelect = document.getElementById("database-filter-value");
-    field = fieldSelect.value;
-    value = valueSelect.value;
+    let field = fieldSelect.value;
+    let value = valueSelect.value;
     createPill(field, value);
     toggleFilterPopup();
 }
@@ -41,13 +41,14 @@ function toggleFilterPopup() {
 }
 
 function createPill(field, value){
-    pillID = field + "-" + value;
+    let pillID = field + "-" + value;
+    console.log(pillID);
     if (filter.includes(pillID)) return;
     const pill = document.createElement("div");
     pill.classList.add("pill");
     pill.id = pillID;
     pill.innerHTML = `
-        <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()}</div>
+        <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()} ${pillID}</div>
         <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('${pillID}')">
     `;    
     
@@ -56,14 +57,15 @@ function createPill(field, value){
 
     if (filter.length === 0) openPillMenu();
     filter.push(pillID);
-    fetchData(sort, filter);
+    fetchData(sort, filter, search);
+    console.log(filter);
 }
 
 function deletePill(pillID){
     document.getElementById(pillID).remove();
     filter = filter.filter(item => item !== pillID);
     if (filter.length === 0) closePillMenu();
-    fetchData(sort, filter);
+    fetchData(sort, filter, search);
 }
 
 function openPillMenu(){
@@ -153,7 +155,7 @@ function sortTableByField(field){
     }
 
     updateSortUI(field);
-    fetchData(sort, filter);
+    fetchData(sort, filter, search);
 }
 
 /* LOGIC TO SEND DATA TO OTHER PAGES */
@@ -220,16 +222,15 @@ function fetchColumns() {
             th.innerHTML = field.replace("_", " ").toUpperCase() + '<img id="database-icon-' + field + '" class="database-sort-icon" src="static/icons/icon-up.png" alt="Sort icon"></img>';
             tableHeader.appendChild(th);
             columns.push(field);
-        });
-        td.onclick = () => sortTableByField(field);
-
+        })
     })
     .catch(error => console.error('Error:', error));
 }
 
 /* LOGIC TO FETCH TABLE DATA */
-function fetchData(sort = { name: 'ASC' }, filter = []) {
-    const table = document.querySelector('table tbody');
+function fetchData(sort = { name: 'ASC' }, filter = [], search="") {
+    const table = document.getElementById('database-body');
+    studentIDs = [];
 
     fetch('/get_data', {
         method: 'POST',
