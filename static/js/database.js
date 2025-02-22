@@ -6,6 +6,15 @@ let filter = [];
 let search = "";
 let allStudentsSelected = false;
 
+/* SEARCH LOGIC */
+const searchTerm = document.getElementById("database-search-term");
+searchTerm.addEventListener("keydown", function(event){
+    if (event.key === "Enter"){
+        search = searchTerm.value;
+        fetchData(sort, filter, search);
+    }
+});
+
 /* FILTER LOGIC */
 function createFilter(){
     const fieldSelect = document.getElementById("database-filter-field");
@@ -227,7 +236,7 @@ function fetchData(sort = { name: 'ASC' }, filter = []) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ sort: sort, filter: filter })
+        body: JSON.stringify({ sort: sort, filter: filter, search: search })
     })
     .then(response => response.json())
     .then(data => {
