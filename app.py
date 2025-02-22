@@ -90,7 +90,6 @@ def logout():
 # Define a route for the home page
 
 app.config["DATABASE"] = "students.db"
-app.secret_key = 'key'
 
 @app.route('/')
 def index():
