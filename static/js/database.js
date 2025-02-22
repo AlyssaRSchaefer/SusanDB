@@ -253,7 +253,15 @@ function fetchData(sort = { name: 'ASC' }, filter = [], search="") {
             // Loop through columns to ensure correct order
             columns.forEach(col => {
                 const td = document.createElement("td");
-                td.innerHTML = row[col] !== undefined ? row[col] : ''; // Handle missing fields
+                let cellText = row[col] !== undefined ? String(row[col]) : '';
+
+                // Highlight search term
+                if (search.trim() !== '' && typeof cellText === 'string') {
+                    const regex = new RegExp(`(${search})`, 'gi');
+                    cellText = cellText.replace(regex, '<span class="database-highlight">$1</span>');
+                }
+
+                td.innerHTML = cellText;
                 tr.appendChild(td);
             });
 

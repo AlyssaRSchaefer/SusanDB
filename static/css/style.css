@@ -336,6 +336,10 @@ td, th {
     margin-bottom: 15px;
 }
 
+.database-highlight {
+    background-color: var(--secondary-color);
+}
+
 /* TEMPLATES PAGE */
 .templates-body {
     background-color: #f4f4f4;
