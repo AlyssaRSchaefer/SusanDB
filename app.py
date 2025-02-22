@@ -1,15 +1,15 @@
 from flask import Flask, g, session, render_template, jsonify, request
 import os
-#from dotenv import load_dotenv
-#import msal
+from dotenv import load_dotenv
+import msal
 import sqlite3
 import webview
 import threading
 from flask import Flask, render_template, request, session, redirect, url_for
 import secrets
 import tempfile
-#from openpyxl import load_workbook
-#from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
 
@@ -18,18 +18,83 @@ from onedrive_utils import get_user_profile, download_file_from_share_url, updat
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
-# load_dotenv()
+load_dotenv()
 
 app = Flask(__name__)
 
 # Configuration from environment variables
-app.secret_key = "key"
+app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
+CLIENT_ID = os.getenv("CLIENT_ID")
+AUTHORITY = os.getenv("AUTHORITY")
+SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
+REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
+STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
+REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
+
+if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
+    raise ValueError("Missing required environment variables. Check your .env file.")
+
+# running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
+def run_at_login():
+    user_data = get_user_profile(session["access_token"])
+    session["name"] = user_data.get("displayName", "Unknown User")
+
+#################################################################################
+# App specific and routing logic
+#################################################################################
+
+# handles initial login logic
+@app.route('/login')
+def login():
+    with app.app_context():
+        # need access token to interact in any way with OneDrive API
+        result = msal_app.acquire_token_interactive(SCOPES)
+
+        if "access_token" in result:
+            session["access_token"] = result.get("access_token")
+            run_at_login()
+            
+            file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
+
+            try:
+                # Save the database file to a temporary location
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
+                    temp_db.write(file_content)
+                    temp_db_path = temp_db.name  # Store the file path
+                
+                # Open SQLite database
+                conn = sqlite3.connect(temp_db_path)
+                cursor = conn.cursor()
+
+                # Fetch student data
+                cursor.execute("SELECT * FROM students")
+                rows = cursor.fetchall()
+
+                columns = [desc[0] for desc in cursor.description]
+                student_data = [dict(zip(columns, row)) for row in rows]
+
+                conn.close()
+            except Exception as e:
+                return f"Error reading database file: {e}"
+            
+            return render_template("database.html", students=student_data, field_order=columns)
+        else:
+            return f"Login failed: {result.get('error_description', 'Unknown error')}"
+
+@app.route('/logout')
+def logout():
+    session.clear()
+
+    return redirect(url_for('index'))
+        
+# Define a route for the home page
+
 app.config["DATABASE"] = "students.db"
 
 @app.route('/')
 def index():
     #return redirect(url_for('templates'))
-    return render_template("database.html")
+    return render_template("login.html")
 
 @app.route('/database')
 def database():
@@ -95,6 +160,14 @@ def get_templates():
 def get_all_fields():
     all_fields=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
     return all_fields
+
+@app.route('/generate_report')
+def generate_report():
+    #TODO: LOAD IN DYNAMICALLY
+    all_fields = get_all_fields()
+    templates_dict = get_templates()
+
+    return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
 
 @app.route('/templates')
 def templates():
