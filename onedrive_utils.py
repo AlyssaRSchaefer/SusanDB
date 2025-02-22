@@ -57,6 +57,19 @@ def list_shared_folder_contents(access_token, sharing_url):
         return None
 
 # download a file's content from OneDrive
+def download_file_from_share_url(access_token, sharing_url):
+    share_id = generate_share_id(sharing_url)
+    # Using the /content endpoint returns the raw bytes of the file
+    url = f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem/content"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.content
+    else:
+        logging.error(f"Error downloading file {sharing_url}: {response.status_code} {response.text}")
+        return None
+
+# download a file's content from OneDrive
 def download_file(access_token, file_id):
     # Using the /content endpoint returns the raw bytes of the file
     url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
@@ -65,7 +78,7 @@ def download_file(access_token, file_id):
     if response.status_code == 200:
         return response.content
     else:
-        logging.error(f"Error downloading file: {response.status_code} {response.text}")
+        logging.error(f"Error downloading file {file_id}: {response.status_code} {response.text}")
         return None
 
 # reupload the file by PUT-ing the new content
@@ -80,6 +93,26 @@ def update_file(access_token, file_id, updated_content):
         return response.json()  # returns file metadata after upload
     else:
         logging.error(f"Error updating file: {response.status_code} {response.text}")
+        return None
+
+def update_file_from_share_url(access_token, sharing_url, updated_content):
+    share_id = generate_share_id(sharing_url)  # Convert URL to share ID
+    url = f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem/content"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/octet-stream"
+    }
+
+    response = requests.put(url, headers=headers, data=updated_content)
+
+    if response.status_code in [200, 201]:
+        try:
+            return response.json()  # Return file metadata after update
+        except ValueError:
+            return {"message": "File updated successfully, but no JSON response."}
+    else:
+        logging.error(f"Error updating file {sharing_url}: {response.status_code} {response.text}")
         return None
     
 # get user profile

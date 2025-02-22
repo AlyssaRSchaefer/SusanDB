@@ -1,0 +1,235 @@
+{% extends 'auxiliary.html' %}
+
+{% block title %}Generate Report{% endblock %}
+
+{% block content %}
+
+<!-- New Field Pop-Up (remains unchanged) -->
+<div id="field-popup" class="popup-overlay" style="display: none;">
+    <div class="popup-content">
+        <button class="close-button" onclick="closeFieldPopup()">x</button>
+        <h3 class="templates-popup-header">Add New Field</h3>
+        <select class="templates-select" id="new-field-select">
+            <option value="">-- Select Field --</option>
+        </select>
+        <div>
+            <button class="primary-button popup-button" onclick="addNewField()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Template Selector -->
+<div id="generate-report-template-selector">
+    <h1 id="generate-report-title">Generate Report</h1>
+    <select id="dropdown" class="templates-select">
+        <option value="" disabled selected>Choose template</option>
+        {% for name in templates.keys() %}
+            <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+    </select>
+    <br id="selector-confirm-button-br">
+    <button onclick="confirmSelection()" class="primary-button popup-button" id="template-confirm-button">LOAD TEMPLATE</button>
+</div>
+
+<!-- Template Editor -->
+<div class="generate-report-templates-section" id="fields-section" style="display: none;">
+    <div class="templates-controls">
+      <div class="templates-controls-left">
+        <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
+        <div id="revert-fields-btn" class="button primary-button" style="display: none;" onclick="revertTemplateChanges()">REVERT</div>
+      </div>
+    </div>
+    <div class="templates-divider"></div>
+    <div class="templates-table-container">
+      <table class="templates-table">
+        <thead>
+          <tr>
+            <th id="template-name-header">FIELDS</th>
+          </tr>
+        </thead>
+        <tbody id="template-fields-body" class="sortable">
+          <!-- Fields will be loaded here dynamically -->
+        </tbody>
+      </table>
+    </div>
+    <center>
+        <button onclick="generateReport()" class="primary-button popup-button">GENERATE</button>
+    </center>
+</div>
+
+<script>
+  // Store the original templates (passed from Python) and all available fields
+  const templatesDict = JSON.parse('{{ templates | tojson }}');
+  const originalTemplatesDict = JSON.parse('{{ templates | tojson }}');
+  const all_fields = JSON.parse('{{ all_fields | tojson }}');
+  let currentTemplate = null;
+  let hasChanges = false;
+  let sortableInstance = null;
+
+  // Called when the user clicks the CONFIRM button next to the dropdown
+  function confirmSelection() {
+    const dropdown = document.getElementById("dropdown");
+    const selectedValue = dropdown.value;
+    
+    if (selectedValue) {
+      // If switching templates and there are unsaved changes, confirm with the user
+      if (currentTemplate && hasChanges) {
+        const userConfirmed = confirm("Switching will erase changes made. Are you sure you want to switch templates?");
+        if (!userConfirmed) {
+          return;
+        } else {
+          hasChanges = false;
+          templatesDict[currentTemplate] = [...originalTemplatesDict[currentTemplate]]; // Restore original fields
+          document.getElementById('revert-fields-btn').style.display = 'none';
+        }
+      }
+      currentTemplate = selectedValue;
+      loadTemplateFields(currentTemplate);
+      // Add a class to animate the selector container up to the top of the body (just below your header)
+      document.getElementById("generate-report-template-selector").classList.add("confirmed");
+      document.getElementById("template-confirm-button").classList.add("confirmed");
+      document.getElementById("selector-confirm-button-br").style.display = "none";
+      document.getElementById("generate-report-title").style.display = "none";
+    } else {
+      alert("Please select a template before confirming.");
+    }
+  }
+
+  function openFieldPopup() {
+    if (!currentTemplate) {
+      alert("Please select a template first.");
+      return;
+    }
+    // Filter out fields already present (case-insensitive)
+    const normalizedCurrentFields = templatesDict[currentTemplate].map(field => field.toLowerCase());
+    const availableFields = all_fields.filter(field => !normalizedCurrentFields.includes(field.toLowerCase()));
+    // Populate the popup dropdown with available fields
+    const selectElement = document.getElementById("new-field-select");
+    selectElement.innerHTML = '<option value="">-- Select Field --</option>';
+    availableFields.forEach(field => {
+      const option = document.createElement("option");
+      option.value = field;
+      option.text = field.toUpperCase();
+      selectElement.appendChild(option);
+    });
+    document.getElementById("field-popup").style.display = "flex";
+  }
+
+  function addNewField() {
+    const selectedField = document.getElementById("new-field-select").value;
+    if (selectedField === "") {
+      alert("Please select a field.");
+      return;
+    }
+    const normalizedSelectedField = selectedField.toUpperCase();
+    if (!templatesDict[currentTemplate].includes(normalizedSelectedField)) {
+      templatesDict[currentTemplate].push(normalizedSelectedField);
+      loadTemplateFields(currentTemplate, true); // Reload fields (from a field addition)
+      hasChanges = true;
+      document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
+      document.getElementById('revert-fields-btn').style.display = 'inline-block';
+    } else {
+      alert("Field already exists in the template.");
+    }
+    closeFieldPopup();
+  }
+
+  function closeFieldPopup() {
+    document.getElementById("field-popup").style.display = "none";
+  }
+
+  function loadTemplateFields(templateName, from_field = false) {
+    if (hasChanges && !from_field) {
+      const userConfirmed = confirm("You have unsaved changes. Are you sure you want to switch templates?");
+      if (!userConfirmed) {
+        return;
+      } else {
+        hasChanges = false;
+        templatesDict[currentTemplate] = [...originalTemplatesDict[currentTemplate]];
+        document.getElementById('revert-fields-btn').style.display = 'none';
+      }
+    }
+    currentTemplate = templateName;
+    const fields = [...templatesDict[templateName]]; // Copy the fields
+    document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
+    const fieldsBody = document.getElementById('template-fields-body');
+    fieldsBody.innerHTML = ''; // Clear previous fields
+
+    // Create a table row for each field with a delete icon
+    fields.forEach(field => {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      
+      // Field name cell
+      const fieldCell = document.createElement('span');
+      fieldCell.classList.add('drag-handle', 'templates-field-name');
+      fieldCell.style.textAlign = 'center';
+      fieldCell.textContent = field;
+      cell.appendChild(fieldCell);
+
+      // Delete icon cell
+      const deleteIcon = document.createElement('span');
+      deleteIcon.classList.add('templates-delete-icon');
+      deleteIcon.textContent = '🗑️';
+      deleteIcon.onclick = () => confirmDeleteField(field);
+      cell.appendChild(deleteIcon);
+
+      row.appendChild(cell);
+      row.classList.add('templates-field-row');
+      fieldsBody.appendChild(row);
+    });
+
+    // Reinitialize Sortable functionality
+    if (sortableInstance) {
+      sortableInstance.destroy();
+    }
+    sortableInstance = new Sortable(fieldsBody, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      onEnd: function () {
+        hasChanges = true;
+        document.getElementById('revert-fields-btn').style.display = 'inline-block';
+        document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
+      }
+    });
+    // Show the fields section (if not already visible)
+    document.getElementById('fields-section').style.display = "flex";
+  }
+
+  function revertTemplateChanges() {
+    const userConfirmed = confirm("Are you sure you want to revert changes made?");
+    if (!userConfirmed) {
+      return;
+    } else {
+      templatesDict[currentTemplate] = [...originalTemplatesDict[currentTemplate]];
+      hasChanges = false;
+      loadTemplateFields(currentTemplate, true);
+      document.getElementById('revert-fields-btn').style.display = 'none';
+      document.getElementById('template-name-header').textContent = `${templateName} FIELDS`;
+    }
+  }
+
+  function confirmDeleteField(fieldName) {
+    if (confirm(`Are you sure you want to delete the field "${fieldName}"?`)) {
+      deleteField(fieldName);
+    }
+  }
+
+  function deleteField(fieldName) {
+    const index = templatesDict[currentTemplate].indexOf(fieldName);
+    if (index > -1) {
+      templatesDict[currentTemplate].splice(index, 1);
+      loadTemplateFields(currentTemplate, true);
+      hasChanges = true;
+      document.getElementById('revert-fields-btn').style.display = 'inline-block';
+      document.getElementById('template-name-header').textContent = `${currentTemplate} (MODIFIED) FIELDS`;
+    }
+  }
+
+  // Dummy function for generating the report—implement as needed.
+  function generateReport() {
+    alert("Generating report for template: " + currentTemplate);
+    // Place your report-generation logic here.
+  }
+</script>
+{% endblock %}
