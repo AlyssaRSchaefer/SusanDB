@@ -3,6 +3,7 @@ let columns = [];
 let selectedStudents = []; 
 let studentIDs = [];
 let filter = [];
+let search = "";
 let allStudentsSelected = false;
 
 /* FILTER LOGIC */
@@ -23,6 +24,8 @@ function toggleFilterPopup() {
         popup.style.display = "flex"; //
         database.style.display = "none";
     } else {
+        document.getElementById("database-filter-field").selectedIndex = 0;
+        document.getElementById("database-filter-value").innerHTML = '';
         popup.style.display = "none";
         database.style.display = "block";
     }
@@ -261,7 +264,7 @@ async function populateFieldSelect() {
         fields.forEach(field => {
             const option = document.createElement('option');
             option.value = field;
-            option.textContent = field;
+            option.textContent = field.toUpperCase().replace("_", " ");
             select.appendChild(option);
         });
     } catch (error) {
