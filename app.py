@@ -367,7 +367,7 @@ def details():
                            student=students)
 
 @app.route('/generate-report')
-def generate_report():
+def generate_report2():
     selected_students = session.get('selected_students', [])
     students = get_students_by_ids(selected_students)
     return render_template('auxiliary/generate-report.html',
@@ -486,6 +486,14 @@ def get_students_by_ids(ids):
     students = [dict(row) for row in cursor.fetchall()]
     return students
 
+# MSAL app setup
+def _build_msal_app():
+    return msal.PublicClientApplication(
+        client_id=CLIENT_ID,
+        authority=AUTHORITY
+    )
+
+msal_app = _build_msal_app()
 
 # Main entry point
 if __name__ == '__main__':
