@@ -14,7 +14,7 @@ function fetchLayout() {
             const tr = document.createElement("tr");
             tr.id = "layout" + field;
             tr.classList.add("template-selectable-row")
-            tr.innerHTML = "<td><span class='template-name'>" + field.replace("_", " ").toUpperCase() + "</span></td><span class='templates-delete-icon'>🗑️</span>";
+            tr.innerHTML = "<td><span class='template-name'>" + field.replace("_", " ").toUpperCase() + "</span><span class='templates-delete-icon'>🗑️</span></td>";
             table.appendChild(tr);
             fields.push(field);
         })
