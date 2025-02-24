@@ -183,7 +183,7 @@ function openGenerateReportPage(){
     
     storeSelectedStudents()
     .then(() => {
-        window.location.href = '/generate-report'; 
+        window.location.href = '/generate_report'; 
     })
     .catch(error => console.error('Error:', error));
 }

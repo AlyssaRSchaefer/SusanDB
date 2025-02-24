@@ -227,9 +227,42 @@
   }
 
   // Dummy function for generating the report—implement as needed.
-  function generateReport() {
-    alert("Generating report for template: " + currentTemplate);
-    // Place your report-generation logic here.
+    function generateReport() {
+      if (!currentTemplate) {
+          alert("Please select a template first.");
+          return;
+      }
+
+      const fields = templatesDict[currentTemplate];
+
+      if (fields.length === 0) {
+          alert("No fields selected for the report.");
+          return;
+      }
+
+      fetch('/generate_report', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+              template_name: currentTemplate,
+              fields: fields
+          })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              alert("Report generated successfully!");
+          } else {
+              alert("Error generating report: " + data.error);
+          }
+      })
+      .catch(error => {
+          console.error("Error:", error);
+          alert("An error occurred while generating the report.");
+      });
   }
+
 </script>
 {% endblock %}
