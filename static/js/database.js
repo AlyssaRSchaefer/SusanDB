@@ -223,6 +223,7 @@ function fetchColumns() {
             tableHeader.appendChild(th);
             columns.push(field);
         })
+        fetchData();
     })
     .catch(error => console.error('Error:', error));
 }
@@ -323,6 +324,5 @@ document.getElementById("database-filter-field").addEventListener("change", func
 
 window.onload = () => {
     fetchColumns();
-    fetchData();
     populateFieldSelect();
 };

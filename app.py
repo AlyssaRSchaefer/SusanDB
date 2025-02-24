@@ -30,6 +30,10 @@ SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
 REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
 REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
+FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
+
+STUDENT_DB_LOCAL_PATH="students_local.db"
+FIELD_ORDER_LOCAL_PATH="field_order.txt"
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
@@ -53,31 +57,7 @@ def login():
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
-            
-            file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
-
-            try:
-                # Save the database file to a temporary location
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-                    temp_db.write(file_content)
-                    temp_db_path = temp_db.name  # Store the file path
-                
-                # Open SQLite database
-                conn = sqlite3.connect(temp_db_path)
-                cursor = conn.cursor()
-
-                # Fetch student data
-                cursor.execute("SELECT * FROM students")
-                rows = cursor.fetchall()
-
-                columns = [desc[0] for desc in cursor.description]
-                student_data = [dict(zip(columns, row)) for row in rows]
-
-                conn.close()
-            except Exception as e:
-                return f"Error reading database file: {e}"
-            
-            return render_template("database.html", students=student_data, field_order=columns)
+            return render_template("database.html")
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
@@ -89,46 +69,13 @@ def logout():
         
 # Define a route for the home page
 
-app.config["DATABASE"] = "students.db"
-
 @app.route('/')
 def index():
-    #return redirect(url_for('templates'))
     return render_template("login.html")
 
 @app.route('/database')
 def database():
-    # Download the Excel file
-    file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
-    if file_content is None:
-        return "Failed to download the Excel file from OneDrive."
-    
-    try:
-        # Save the database file to a temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-            temp_db.write(file_content)
-            temp_db_path = temp_db.name  # Store the file path
-        
-        # Open SQLite database
-        conn = sqlite3.connect(temp_db_path)
-        cursor = conn.cursor()
-
-        # Fetch student data
-        cursor.execute("SELECT * FROM students")
-        rows = cursor.fetchall()
-
-        # Get column names
-        columns = [desc[0] for desc in cursor.description]
-
-        # Convert to dictionary format
-        student_data = [dict(zip(columns, row)) for row in rows]
-
-        # Close connection
-        conn.close()
-    except Exception as e:
-        return f"Error reading database file: {e}"
-    return render_template("database.html", students=student_data, field_order=columns)
-
+    return render_template("database.html")
 
 @app.route('/import')
 def import_data():
@@ -354,7 +301,7 @@ def greet():
 @app.route('/layout')
 def layout():
     return render_template('auxiliary/layout.html', 
-                           heading="Layout", 
+                           heading="", 
                            back_link="/database")
 
 @app.route('/details')
@@ -391,13 +338,52 @@ def start_flask():
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(app.config["DATABASE"])
-        g.db.row_factory = sqlite3.Row  # Allows dict-like access
+        # Check if local copy exists, otherwise download
+        if not os.path.exists(STUDENT_DB_LOCAL_PATH):
+            download_and_store_file(STUDENT_DB_LOCAL_PATH, STUDENT_DB_URL)
+        g.db = sqlite3.connect(STUDENT_DB_LOCAL_PATH)
+        g.db.row_factory = sqlite3.Row
     return g.db
 
-# Close DB connection after request
+def get_field_order():
+    # Check if local copy exists, otherwise download
+    if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
+        download_and_store_file(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+    
+    try:
+        with open(FIELD_ORDER_LOCAL_PATH, "r", encoding="utf-8") as f:
+            field_order = f.read().strip().split("\n")
+        return [field.strip() for field in field_order if field.strip()]
+    except Exception as e:
+        print(f"Error reading field order file: {e}")
+        return None
+
+# This function downloads a local copy of a OneDrive file at a given path
+def download_and_store_file(local_path, url):
+    """Download a file from OneDrive and store it locally."""
+    file_content = download_file_from_share_url(session["access_token"], url)
+    
+    if file_content is None:
+        raise Exception(f"Failed to download file from OneDrive: {url}")
+    
+    # Save the file locally
+    with open(local_path, "wb") as f:
+        f.write(file_content)
+
+# This function uploads a local file to a OneDrive url
+def upload_file_to_onedrive(local_path, url):
+    """Upload a local file back to OneDrive."""
+    with open(local_path, "rb") as f:
+        file_content = f.read()
+    
+    success = update_file_from_share_url(session["access_token"], url, file_content)
+    
+    if not success:
+        raise Exception(f"Failed to upload file to OneDrive: {url}")
+
 @app.teardown_appcontext
 def close_db(exception):
+    """Close database connection at the end of request."""
     db = g.pop("db", None)
     if db is not None:
         db.close()
@@ -424,11 +410,6 @@ def get_data():
     search = data.get('search', '')
     queried_data = query_db(sort, filter, search)
     return jsonify(queried_data)
-
-def get_field_order():
-    with open("app/pref/field_order.txt", "r") as f:
-        fields = [line.strip() for line in f.readlines()]
-    return fields
 
 def query_db(sort, filter_params, search_term):
     db = get_db()

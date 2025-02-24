@@ -4,4 +4,52 @@
 
 {% block content %}
 
+    <div id="field-popup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <button class="close-button" onclick="closeFieldPopup()">x</button>
+            <h3 class="templates-popup-header">Add New Field</h3>
+            <select class="templates-select" id="new-field-select">
+                <option value="">-- Select Field --</option>
+            </select>
+            <div>
+                <button class="primary-button popup-button" onclick="addNewField()">Confirm</button>
+            </div>
+        </div>
+    </div>
+  
+    <div class="templates-section" id="fields-section">
+        <div class="templates-controls">
+          <div class="templates-controls-left">
+            <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
+          </div>
+        </div>
+        <div class="templates-divider"></div>
+        <div class="templates-table-container">
+          <table class="templates-table">
+            <thead>
+              <tr>
+                <th id="template-name-header">DATABASE LAYOUT</th>
+              </tr>
+            </thead>
+            <tbody id="layout-fields-body"  class="sortable">
+              <!-- Fields will be loaded here dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div class="templates-controls">
+          <div class="templates-controls-right">
+            <div class="button secondary-button" onclick="saveLayoutChanges()">
+              SAVE
+            </div>
+            <div class="button secondary-button" onclick="revertLayoutChanges()">
+              REVERT
+            </div>
+          </div>
+      </div>
+    </div>
+
+{% endblock %}
+
+{% block script %}
+<script src="static/js/layout.js"></script>  <!-- Default script -->
 {% endblock %}
