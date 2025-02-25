@@ -402,6 +402,30 @@ def get_fields():
     field_order = get_field_order()
     return jsonify(field_order)
 
+@app.route('/save_fields', methods=['POST'])
+def save_fields():
+    """Save the updated field order and upload it back to OneDrive."""
+    try:
+        data = request.get_json()
+        new_field_order = data.get("fields")
+
+        if not isinstance(new_field_order, list):
+            return jsonify({"error": "Invalid data format. Expected a list."}), 400
+
+        # Write the new field order to the local file
+        with open(FIELD_ORDER_LOCAL_PATH, "w", encoding="utf-8") as f:
+            f.write("\n".join(new_field_order))
+
+        # Upload the updated file back to OneDrive
+        upload_file_to_onedrive(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+        return jsonify({"message": "Field order successfully updated."}), 200
+
+    except Exception as e:
+        print(f"Error saving field order: {e}")
+        return jsonify({"error": "Failed to save field order."}), 500
+
+
 @app.route('/get_data', methods=['POST'])
 def get_data():
     data = request.json

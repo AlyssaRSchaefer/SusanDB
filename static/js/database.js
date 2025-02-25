@@ -48,7 +48,7 @@ function createPill(field, value){
     pill.classList.add("pill");
     pill.id = pillID;
     pill.innerHTML = `
-        <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()} ${pillID}</div>
+        <div class="pill-content">${field.toUpperCase()}: ${value.toUpperCase()}</div>
         <img class="pill-icon" src="/static/icons/icon-close.png" onclick="deletePill('${pillID}')">
     `;    
     

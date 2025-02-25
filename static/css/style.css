@@ -489,6 +489,10 @@ td, th {
     cursor: grab;
 }
 
+.templates-field-name, .layout-field-name {
+    text-align: center;
+}
+
 .templates-field-row:active {
     cursor: grabbing;
 }
@@ -572,6 +576,9 @@ td, th {
     color: var(--quarternary-color);
 }
   
+#save-fields-btn, #revert-fields-btn {
+    display: none;
+}
 
 /* IMPORT PAGE */
 .import h1 {
