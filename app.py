@@ -152,6 +152,7 @@ def upload_excel():
         return "File uploaded", 200
     return "Invalid file type", 400
 
+
 def upload_file_to_share_url(access_token, file_path, upload_url):
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -171,26 +172,11 @@ def delete_student():
     if not student_id:
         return jsonify({"error": "Invalid student ID"}), 400
 
-    # Download database file
-    file_content = download_file_from_share_url(session.get("access_token"), STUDENT_DB_URL)
-
-    if file_content is None:
-        return jsonify({"error": "Failed to download database (file content is None)"}), 500
-
-    print("File size:", len(file_content))  # Debug: check if data is actually downloaded
-
-    # Save and verify content
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-        temp_db.write(file_content)
-        temp_db_path = temp_db.name  
-
-    print("Database file saved to:", temp_db_path)
-
+    # Get the active database connection
+    db = get_db()
     # Try opening the database
     try:
-        conn = sqlite3.connect(temp_db_path)
-        cursor = conn.cursor()
-
+        cursor = db.cursor()
         # Verify database integrity
         cursor.execute("PRAGMA integrity_check;")
         check_result = cursor.fetchone()
@@ -210,16 +196,14 @@ def delete_student():
         
         if result is None:
             print(f"Student ID {student_id} not found in database.")  # Debugging line
-            conn.close()
+            db.close()
             return jsonify({"error": "Student not found"}), 404
         else:
             print(f"Found student: {result}")  # Debugging line
 
         # Delete student
         cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
-        conn.commit()
-        print("Database file modified time:", os.path.getmtime(temp_db_path))
-
+        db.commit()
         # Verify deletion
         cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
         after_delete = cursor.fetchone()
@@ -233,16 +217,8 @@ def delete_student():
         cursor.execute("SELECT COUNT(*) FROM students;")
         student_count_after = cursor.fetchone()
         print("Number of students in DB after deletion:", student_count_after)
-
-        conn.close()
-
-        # Upload the modified database back to OneDrive (if needed)
-        upload_response = upload_file_to_share_url(session.get("access_token"), temp_db_path, STUDENT_DB_URL)
-        if "error" in upload_response:
-            return jsonify(upload_response), 500
-
-        print("Successfully uploaded the modified file to OneDrive.")
         return jsonify({"message": "Student deleted successfully"}), 200
+        db.close()
 
     except Exception as e:
         print("Error opening or modifying database:", e)
