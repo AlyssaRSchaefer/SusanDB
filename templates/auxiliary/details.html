@@ -1,9 +1,43 @@
-{% extends 'auxiliary.html' %}
+{% extends "header.html" %}
 
 {% block title %}Details Page{% endblock %}
 
 {% block content %}
-
-
-
+<div class="student-details">
+    <h2>{{ student.name }}'s Details</h2>
+    <table>
+        <tr>
+            <th>ID</th>
+            <td>{{ student.id }}</td>
+        </tr>
+        <tr>
+            <th>Name</th>
+            <td>{{ student.name }}</td>
+        </tr>
+        <tr>
+            <th>Age</th>
+            <td>{{ student.age }}</td>
+        </tr>
+        <tr>
+            <th>Grade</th>
+            <td>{{ student.grade }}</td>
+        </tr>
+        <tr>
+            <th>Favorite Subject</th>
+            <td>{{ student.favorite_subject }}</td>
+        </tr>
+        <tr>
+            <th>Email</th>
+            <td>{{ student.email }}</td>
+        </tr>
+        <tr>
+            <th>GPA</th>
+            <td>{{ student.gpa }}</td>
+        </tr>
+        <tr>
+            <th>Extracurricular</th>
+            <td>{{ student.extracurricular }}</td>
+        </tr>
+    </table>
+</div>
 {% endblock %}

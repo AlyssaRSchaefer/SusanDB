@@ -12,6 +12,9 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
+from werkzeug.utils import secure_filename
+import shutil 
+import requests 
 
 from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 
@@ -134,6 +137,211 @@ def database():
 def import_data():
     return render_template('import.html')
 
+@app.route('/upload-excel', methods=['POST'])
+def upload_excel():
+    if 'excel_file' not in request.files:
+        return "No file part", 400
+    file = request.files['excel_file']
+    if file.filename == '':
+        return "No selected file", 400
+
+    if file and allowed_file(file.filename):
+        #handle file saving and processing
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return "File uploaded", 200
+    return "Invalid file type", 400
+
+def upload_file_to_share_url(access_token, file_path, upload_url):
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+    with open(file_path, 'rb') as file_data:
+        response = requests.put(upload_url, headers=headers, data=file_data)
+    if response.status_code == 200:
+        return {"message": "File uploaded successfully"}
+    else:
+        return {"error": f"Failed to upload file: {response.status_code}"}
+
+@app.route('/delete-student', methods=['POST'])
+def delete_student():
+    data = request.get_json()
+    student_id = data.get('id')
+
+    if not student_id:
+        return jsonify({"error": "Invalid student ID"}), 400
+
+    # Download database file
+    file_content = download_file_from_share_url(session.get("access_token"), STUDENT_DB_URL)
+
+    if file_content is None:
+        return jsonify({"error": "Failed to download database (file content is None)"}), 500
+
+    print("File size:", len(file_content))  # Debug: check if data is actually downloaded
+
+    # Save and verify content
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
+        temp_db.write(file_content)
+        temp_db_path = temp_db.name  
+
+    print("Database file saved to:", temp_db_path)
+
+    # Try opening the database
+    try:
+        conn = sqlite3.connect(temp_db_path)
+        cursor = conn.cursor()
+
+        # Verify database integrity
+        cursor.execute("PRAGMA integrity_check;")
+        check_result = cursor.fetchone()
+        print("PRAGMA integrity_check result:", check_result)
+
+        cursor.execute("SELECT COUNT(*) FROM students;")
+        student_count = cursor.fetchone()
+        print("Number of students in DB before deletion:", student_count)
+
+        # Ensure student ID is an integer
+        print(f"Received student ID: {student_id}, type: {type(student_id)}")
+        student_id = int(student_id)
+
+        # Check if student exists
+        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        result = cursor.fetchone()
+        
+        if result is None:
+            print(f"Student ID {student_id} not found in database.")  # Debugging line
+            conn.close()
+            return jsonify({"error": "Student not found"}), 404
+        else:
+            print(f"Found student: {result}")  # Debugging line
+
+        # Delete student
+        cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+        conn.commit()
+        print("Database file modified time:", os.path.getmtime(temp_db_path))
+
+        # Verify deletion
+        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        after_delete = cursor.fetchone()
+
+        if after_delete is None:
+            print(f"Student ID {student_id} successfully deleted.")
+        else:
+            print(f"ERROR: Student ID {student_id} still exists after deletion!")
+
+        # Check student count after deletion
+        cursor.execute("SELECT COUNT(*) FROM students;")
+        student_count_after = cursor.fetchone()
+        print("Number of students in DB after deletion:", student_count_after)
+
+        conn.close()
+
+        # Upload the modified database back to OneDrive (if needed)
+        upload_response = upload_file_to_share_url(session.get("access_token"), temp_db_path, STUDENT_DB_URL)
+        if "error" in upload_response:
+            return jsonify(upload_response), 500
+
+        print("Successfully uploaded the modified file to OneDrive.")
+        return jsonify({"message": "Student deleted successfully"}), 200
+
+    except Exception as e:
+        print("Error opening or modifying database:", e)
+        return jsonify({"error": f"Database error: {e}"}), 500
+
+"""
+@app.route('/delete-student', methods=['POST']) 
+def delete_student():
+    data = request.get_json()
+    student_id = data.get('id')
+
+    if not student_id:
+        return jsonify({"error": "Invalid student ID"}), 400
+
+    # Download database file
+    file_content = download_file_from_share_url(session.get("access_token"), STUDENT_DB_URL)
+
+    if file_content is None:
+        return jsonify({"error": "Failed to download database (file content is None)"}), 500
+
+    print("File size:", len(file_content))  # Debug: check if data is actually downloaded
+
+    # Save and verify content
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
+        temp_db.write(file_content)
+        temp_db_path = temp_db.name  
+
+    print("Database file saved to:", temp_db_path)
+
+    # Try opening the database
+    try:
+        conn = sqlite3.connect(temp_db_path)
+        cursor = conn.cursor()
+
+        # Verify database integrity
+        cursor.execute("PRAGMA integrity_check;")
+        check_result = cursor.fetchone()
+        print("PRAGMA integrity_check result:", check_result)
+
+        cursor.execute("SELECT COUNT(*) FROM students;")
+        student_count = cursor.fetchone()
+        print("Number of students in DB before deletion:", student_count)
+
+        # Ensure student ID is an integer
+        print(f"Received student ID: {student_id}, type: {type(student_id)}")
+        student_id = int(student_id)
+
+        # Check if student exists
+        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        result = cursor.fetchone()
+        
+        if result is None:
+            print(f"Student ID {student_id} not found in database.")  # Debugging line
+            conn.close()
+            return jsonify({"error": "Student not found"}), 404
+        else:
+            print(f"Found student: {result}")  # Debugging line
+
+        # Delete student
+        cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+        conn.commit()
+        print("Database file modified time:", os.path.getmtime(temp_db_path))
+        # Verify deletion
+        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
+        after_delete = cursor.fetchone()
+
+        if after_delete is None:
+            print(f"Student ID {student_id} successfully deleted.")
+        else:
+            print(f"ERROR: Student ID {student_id} still exists after deletion!")
+
+        # Check student count after deletion
+        cursor.execute("SELECT COUNT(*) FROM students;")
+        student_count_after = cursor.fetchone()
+        print("Number of students in DB after deletion:", student_count_after)
+
+        conn.close()
+        return jsonify({"message": "Student deleted successfully"}), 200
+
+    except Exception as e:
+        print("Error opening or modifying database:", e)
+        return jsonify({"error": f"Database error: {e}"}), 500
+"""
+
+
+@app.route('/get-student-files', methods=['POST'])
+def get_student_files():
+    data = request.get_json()
+    student_id = data.get('id')
+    
+    if student_id:
+        # Fetch associated files from database or storage
+        files = [{"id": 1, "name": "File1.xlsx"}, {"id": 2, "name": "File2.pdf"}]  # Replace with actual file fetching
+        return jsonify(files), 200
+    return "Invalid student ID", 400
+
+
+
+"""
 def get_templates():
     templates_dict = {}
 
@@ -160,7 +368,7 @@ def get_templates():
 def get_all_fields():
     all_fields=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
     return all_fields
-
+"""
 @app.route('/generate_report')
 def generate_report():
     #TODO: LOAD IN DYNAMICALLY
@@ -357,14 +565,28 @@ def layout():
                            heading="Layout", 
                            back_link="/database")
 
-@app.route('/details')
-def details():
+"""
+@app.route('/details<int:student_id>')
+def details(student_id):
+    print(f"Received student_id: {student_id}")
     selected_students = session.get('selected_students', [])
     students = get_students_by_ids(selected_students)
+    print(f"Student: {students}") 
     return render_template('auxiliary/details.html',
-                           heading=students[0]["name"],  # Assuming only one student
+                           heading=students[0]["name"],  #Assuming only one student
                            back_link="/database",
                            student=students)
+"""  
+@app.route('/details/<int:student_id>')
+def details(student_id):
+    print(f"Received student_id: {student_id}")
+    students = get_students_by_ids([student_id])  #fetch student by ID
+    if not students:
+        return "Student not found", 404
+    return render_template('auxiliary/details.html',
+                           heading=students[0]["name"],
+                           back_link="/database",
+                           student=students[0])  #pass only the first student
 
 @app.route('/generate-report')
 def generate_report2():
@@ -497,6 +719,7 @@ msal_app = _build_msal_app()
 
 # Main entry point
 if __name__ == '__main__':
+    """
     # Start Flask server in a separate thread
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.daemon = True
@@ -505,3 +728,5 @@ if __name__ == '__main__':
     # Create a PyWebView window to load the Flask app
     webview.create_window('SusanDB', 'http://127.0.0.1:5000')
     webview.start()
+    """
+    app.run(port=5000, debug=True)

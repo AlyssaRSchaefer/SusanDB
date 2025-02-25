@@ -2,7 +2,36 @@
 {% block title %}Import Data Page{% endblock %}
 
 {% block content %}
-    <div class="import">
-        <h1>IMPORT DATA PAGE</h1>
+<div class="import">
+    <h1>IMPORT DATA PAGE</h1>
+
+    <!-- Excel File Upload Section -->
+    <div class="upload-section">
+        <label for="upload-excel">Upload Excel File:</label>
+        <input type="file" id="upload-excel" accept=".xlsx">
+        <button onclick="uploadExcelFile()">Upload</button>
     </div>
+
+    <!-- Template Display Section -->
+    <div class="template-section">
+        <h2>Templates</h2>
+        <ul id="templates-list"></ul>
+    </div>
+
+    <!-- Delete Student Section -->
+    <div class="delete-student-section">
+        <label for="student-id">Student ID to delete:</label>
+        <input type="text" id="student-id">
+        <button onclick="deleteStudent()">Delete Student</button>
+    </div>
+
+    <!-- Associated Files Section -->
+    <div class="files-section">
+        <label for="view-files-id">Student ID to view files:</label>
+        <input type="text" id="view-files-id">
+        <button onclick="listStudentFiles()">View Files</button>
+        <div id="student-files-list"></div>
+    </div>
+</div>
+<script src="static/js/database.js"></script>
 {% endblock %}

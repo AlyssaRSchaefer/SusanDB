@@ -195,7 +195,7 @@ function openDetailsPage(){
     
     storeSelectedStudents()
     .then(() => {
-        window.location.href = '/details'; 
+        window.location.href = '/details/' + selectedStudents[0]; //adds the id onto the end to dynamically find the webpage for a particular student
     })
     .catch(error => console.error('Error:', error));
 }
@@ -320,6 +320,122 @@ document.getElementById("database-filter-field").addEventListener("change", func
     const selectedField = this.value;
     populateValueSelect(selectedField);
 });
+
+function uploadExcelFile() {
+    const fileInput = document.getElementById("upload-excel");
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Please select a file to upload.");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("excel_file", file);
+
+    fetch('/upload-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.ok ? alert("File uploaded successfully.") : alert("Error uploading file."))
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteStudent() 
+{
+    window.location.href = "/database"; //redirect to database.html
+    let studentID = document.getElementById("student-id").value.trim(); //remove whitespace
+    if (studentID === "") 
+    {
+        alert("Please provide a student ID.");
+        return;
+    }
+
+    studentID = Number(studentID);
+    if (isNaN(studentID)) 
+    {
+        alert("Invalid student ID. Please enter a valid number.");
+        return;
+    }
+    fetch('/delete-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: studentID })
+    })
+    .then(response => response.json())
+    .then(data => 
+    {
+        if (data.error) 
+        {
+            alert("Error: " + data.error);
+        } 
+        else 
+        {
+            alert(data.message);
+            //find the row in #database-body and remove it
+            const tableBody = document.getElementById("database-body");
+            if (tableBody) 
+            {
+                Console.log("Found tableBody")
+                const rows = tableBody.getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) 
+                {
+                    const cells = rows[i].getElementsByTagName("td");
+                    
+                    if (cells.length > 0 && cells[0].textContent.trim() === studentID) 
+                    {
+                        tableBody.removeChild(rows[i]);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                Console.log("Did not find tableBody")
+            }
+        }
+    })
+    .catch(error => 
+    {
+        console.error('Error:', error);
+        alert("An error occurred while deleting the student.");
+    });
+}
+
+function listStudentFiles() {
+    const studentID = document.getElementById("view-files-id").value;
+
+    if (!studentID) {
+        alert("Please provide a student ID.");
+        return;
+    }
+
+    fetch('/get-student-files', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: studentID })
+    })
+    .then(response => response.json())
+    .then(files => {
+        const filesList = document.getElementById("student-files-list");
+        filesList.innerHTML = ''; //clear previous files
+
+        if (files.length > 0) {
+            files.forEach(file => {
+                const fileLink = document.createElement("a");
+                fileLink.href = `/download-file/${file.id}`;
+                fileLink.innerText = file.name;
+                filesList.appendChild(fileLink);
+            });
+        } else {
+            filesList.innerText = "No files found for this student.";
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
 
 window.onload = () => {
     fetchColumns();
