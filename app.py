@@ -345,6 +345,9 @@ def get_db():
         g.db.row_factory = sqlite3.Row
     return g.db
 
+def save_db():
+    upload_file_to_onedrive(STUDENT_DB_LOCAL_PATH, STUDENT_DB_URL)
+
 def get_field_order():
     # Check if local copy exists, otherwise download
     if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
@@ -482,6 +485,67 @@ def get_field_values():
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
     return jsonify(values)
+
+@app.route('/add_field', methods=['POST'])
+def add_field():
+    data = request.json
+    field = data.get('field')
+    default_value = data.get('default')
+
+    db = get_db()
+    query = f"ALTER TABLE students ADD COLUMN {field} TEXT DEFAULT ?"
+    db.execute(query, (default_value,))
+    db.commit()
+    db.close()
+    save_db()
+
+
+@app.route('/delete_field', methods=['POST'])
+def add_field():
+    data = request.json
+    field = data.get('field')
+
+    db = get_db()
+    
+    temp_query = "CREATE TABLE students_temp AS SELECT * FROM students WHERE 1=1;"
+    db.execute(temp_query)
+    
+    drop_query = "DROP TABLE students;"
+    db.execute(drop_query)
+    
+    column_query = f"CREATE TABLE students AS SELECT * FROM students_temp WHERE 1=1 EXCEPT {field};"
+    db.execute(column_query)
+    
+    db.execute("DROP TABLE students_temp;")
+    
+    db.commit()
+    db.close()
+    save_db()
+
+@app.route('/add_student', methods=['POST'])
+def add_student():
+    data = request.json
+    info = data.get('info')
+
+    db = get_db()
+    columns = ", ".join(info.keys())
+    placeholders = ", ".join("?" for _ in info)
+    query = f"INSERT INTO students ({columns}) VALUES ({placeholders})"
+    db.execute(query, tuple(info.values()))
+    db.commit()
+    db.close()
+    save_db()
+
+@app.route('/delete_student', methods=['POST'])
+def delete_student():
+    data = request.json
+    student_id = data.get("id")
+    db = get_db()
+    query = "DELETE FROM students WHERE id = ?"
+    db.execute(query, (student_id,))
+    db.commit()
+    db.close()
+    save_db()
 
 def get_students_by_ids(ids):
     db = get_db()
