@@ -57,7 +57,7 @@ def login():
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
-            return render_template("database.html")
+            return render_template("database.html", delete_mode=False)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
@@ -72,7 +72,7 @@ def index():
 
 @app.route('/database')
 def database():
-    return render_template("database.html")
+    return render_template("database.html", delete_mode=False)
 
 @app.route('/import')
 def import_data():
@@ -85,6 +85,14 @@ def add_field():
 @app.route('/delete_field')
 def delete_field():
     return render_template('auxiliary/delete_field.html', back_link="/database", heading="Delete Field")
+
+@app.route('/add_student')
+def add_student():
+    return render_template('auxiliary/add_student.html', back_link="/database", heading="Add New Student")
+
+@app.route('/delete_student')
+def delete_student():
+    return render_template('database.html', delete_mode=True)
 
 def get_templates():
     templates_dict = {}
@@ -113,6 +121,7 @@ def get_all_fields():
     db = get_db()
     cursor = db.execute("PRAGMA table_info(students);")
     fields = [row[1] for row in cursor.fetchall()]
+    fields.remove("id")
     return jsonify(fields)
 
 @app.route('/generate_report')
@@ -554,30 +563,55 @@ def delete_field_from_db():
 
     return jsonify({"message": "Field deleted successfully."}), 200
 
-@app.route('/add_student', methods=['POST'])
-def add_student():
-    data = request.json
-    info = data.get('info')
+@app.route('/add_student_to_db', methods=['POST'])
+def add_student_to_db():
+    data = request.form.to_dict()  # Extract form data as a dictionary
+
+    if not data:
+        return jsonify({"error": "No data received"}), 400
 
     db = get_db()
-    columns = ", ".join(info.keys())
-    placeholders = ", ".join("?" for _ in info)
+    columns = ", ".join(data.keys())
+    placeholders = ", ".join("?" for _ in data)
     query = f"INSERT INTO students ({columns}) VALUES ({placeholders})"
-    db.execute(query, tuple(info.values()))
-    db.commit()
-    db.close()
-    save_db()
+    
+    try:
+        db.execute(query, tuple(data.values()))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
 
-@app.route('/delete_student', methods=['POST'])
-def delete_student():
-    data = request.json
-    student_id = data.get("id")
-    db = get_db()
-    query = "DELETE FROM students WHERE id = ?"
-    db.execute(query, (student_id,))
-    db.commit()
-    db.close()
     save_db()
+    return render_template("database.html", delete_mode=False)
+
+@app.route('/delete_students_from_db', methods=['POST'])
+def delete_students_from_db():
+    data = request.json
+    student_ids = data.get("ids")
+
+    if not student_ids:
+        return jsonify({"error": "No student IDs provided"}), 400
+
+    db = get_db()
+    
+    try:
+        # Create a placeholder for each student ID
+        placeholders = ", ".join("?" for _ in student_ids)
+        query = f"DELETE FROM students WHERE id IN ({placeholders})"
+        
+        db.execute(query, tuple(student_ids))  # Pass as tuple
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+    
+    save_db()
+    return jsonify({"message": "Students deleted successfully."}), 200
 
 def get_students_by_ids(ids):
     db = get_db()

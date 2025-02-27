@@ -65,6 +65,10 @@ function deleteField(){
     });
 }
 
+function addStudent(){
+    document.getElementById("add-student-form").submit();
+}
+
 function getAllFields() {
     return fetch('/get_student_fields')
         .then(response => {
@@ -81,15 +85,6 @@ function getAllFields() {
             console.error("Error loading fields:", error);
         });
 }
-
-window.onload = () => {
-    getAllFields().then(() => {
-        if (document.getElementById("delete-field-select")) {
-            populateDeleteFieldSelect();
-        }
-    });
-};
-
 
 function populateDeleteFieldSelect() {
     let select = document.getElementById("delete-field-select");
@@ -109,10 +104,27 @@ function populateDeleteFieldSelect() {
     });
 }
 
+function populateAddStudentForm(){
+    let form = document.getElementById("add-student-form");
+    form.innerHTML = "";
+    fields.forEach(field => {
+        let textInput = document.createElement("input");
+        textInput.classList.add("text-input");
+        textInput.name = field;
+        textInput.type = "text";
+        textInput.placeholder = field.toUpperCase().replaceAll("_", " ");
+        form.append(textInput);
+        form.append(document.createElement("br"));
+    })
+}
+
 window.onload = () => {
     getAllFields().then(() => {
         if (document.getElementById("delete-field-select")) {
             populateDeleteFieldSelect();
+        }
+        else if (document.getElementById("add-student-form")){
+            populateAddStudentForm();
         }
     });
 };
