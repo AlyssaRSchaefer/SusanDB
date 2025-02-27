@@ -82,6 +82,10 @@ def import_data():
 def add_field():
     return render_template('auxiliary/add_field.html', back_link="/database", heading="Add New Field")
 
+@app.route('/delete_field')
+def delete_field():
+    return render_template('auxiliary/delete_field.html', back_link="/database", heading="Delete Field")
+
 def get_templates():
     templates_dict = {}
 
@@ -518,27 +522,37 @@ def add_field_to_db():
     return jsonify({"message": "Field added successfully."}), 200
 
 
-@app.route('/delete_field', methods=['POST'])
-def delete_field():
+@app.route('/delete_field_from_db', methods=['POST'])
+def delete_field_from_db():
     data = request.json
     field = data.get('field')
 
     db = get_db()
-    
-    temp_query = "CREATE TABLE students_temp AS SELECT * FROM students WHERE 1=1;"
-    db.execute(temp_query)
-    
-    drop_query = "DROP TABLE students;"
-    db.execute(drop_query)
-    
-    column_query = f"CREATE TABLE students AS SELECT * FROM students_temp WHERE 1=1 EXCEPT {field};"
-    db.execute(column_query)
-    
-    db.execute("DROP TABLE students_temp;")
-    
+    query = f"ALTER TABLE students DROP COLUMN \"{field}\""
+    db.execute(query)
     db.commit()
     db.close()
     save_db()
+
+    try:
+        if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
+            download_and_store_file(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+        with open(FIELD_ORDER_LOCAL_PATH, "r", encoding="utf-8") as f:
+            field_order = f.read().strip().split("\n")
+
+        if field in field_order:
+            field_order.remove(field)
+
+            with open(FIELD_ORDER_LOCAL_PATH, "w", encoding="utf-8") as f:
+                f.write("\n".join(field_order))
+
+            upload_file_to_onedrive(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to update field order: {str(e)}"}), 500
+
+    return jsonify({"message": "Field deleted successfully."}), 200
 
 @app.route('/add_student', methods=['POST'])
 def add_student():

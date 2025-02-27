@@ -3,7 +3,7 @@ import sqlite3
 DB_NAME = "instance/students.db"  # Store database inside the Flask instance folder
 
 def create_db():
-    conn = sqlite3.connect("students.db")
+    conn = sqlite3.connect("students_local.db")
     cursor = conn.cursor()
 
     # Create table

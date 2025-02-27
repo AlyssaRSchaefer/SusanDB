@@ -4,6 +4,3 @@ age
 extracurricular
 email
 gpa
-test_add_to_layout
-test
-test_add_to_layout2
