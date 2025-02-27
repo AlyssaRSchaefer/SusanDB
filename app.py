@@ -64,11 +64,8 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-
     return redirect(url_for('index'))
         
-# Define a route for the home page
-
 @app.route('/')
 def index():
     return render_template("login.html")
@@ -80,6 +77,10 @@ def database():
 @app.route('/import')
 def import_data():
     return render_template('import.html')
+
+@app.route('/add_field')
+def add_field():
+    return render_template('auxiliary/add_field.html', back_link="/database", heading="Add New Field")
 
 def get_templates():
     templates_dict = {}
@@ -105,8 +106,10 @@ def get_templates():
     return templates_dict
 
 def get_all_fields():
-    all_fields=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
-    return all_fields
+    db = get_db()
+    cursor = db.execute("PRAGMA table_info(students);")
+    fields = [row[1] for row in cursor.fetchall()]
+    return jsonify(fields)
 
 @app.route('/generate_report')
 def generate_report():
@@ -289,15 +292,6 @@ def delete_template_api():
     else:
         return {"error": "Error deleting the template. Please try again."}, 500
 
-
-
-# Example API endpoint
-@app.route('/api/greet', methods=['POST'])
-def greet():
-    data = request.json
-    name = data.get('name', 'Guest')  # Default to 'Guest' if no name provided
-    return jsonify(message=f"Hello, {name}!")
-
 @app.route('/layout')
 def layout():
     return render_template('auxiliary/layout.html', 
@@ -471,10 +465,7 @@ def query_db(sort, filter_params, search_term):
 
 @app.route('/get_student_fields', methods=['GET'])
 def get_student_fields():
-    db = get_db()
-    cursor = db.execute("PRAGMA table_info(students);")
-    fields = [row[1] for row in cursor.fetchall()]
-    return jsonify(fields)
+    return get_all_fields()
 
 @app.route('/get_field_values', methods=['POST'])
 def get_field_values():
@@ -486,22 +477,49 @@ def get_field_values():
     values = [row[0] for row in cursor.fetchall()]  # Extract values
     return jsonify(values)
 
-@app.route('/add_field', methods=['POST'])
-def add_field():
+@app.route('/add_field_to_db', methods=['POST'])
+def add_field_to_db():
     data = request.json
     field = data.get('field')
     default_value = data.get('default')
+    add_to_layout = data.get('addToLayout')
 
     db = get_db()
-    query = f"ALTER TABLE students ADD COLUMN {field} TEXT DEFAULT ?"
-    db.execute(query, (default_value,))
+    query = f"ALTER TABLE students ADD COLUMN \"{field}\" TEXT DEFAULT '{default_value}'"
+    db.execute(query)
     db.commit()
     db.close()
     save_db()
 
+    if add_to_layout:
+        try:
+            # Ensure we have the latest field order file
+            if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
+                download_and_store_file(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+            # Read existing field order
+            with open(FIELD_ORDER_LOCAL_PATH, "r", encoding="utf-8") as f:
+                field_order = f.read().strip().split("\n")
+
+            # Append the new field if it's not already present
+            if field not in field_order:
+                field_order.append(field)
+
+                # Write updated field order back to the file
+                with open(FIELD_ORDER_LOCAL_PATH, "w", encoding="utf-8") as f:
+                    f.write("\n".join(field_order))
+
+                # Upload the updated field order back to OneDrive
+                upload_file_to_onedrive(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+        except Exception as e:
+            return jsonify({"error": f"Failed to update field order: {str(e)}"}), 500
+
+    return jsonify({"message": "Field added successfully."}), 200
+
 
 @app.route('/delete_field', methods=['POST'])
-def add_field():
+def delete_field():
     data = request.json
     field = data.get('field')
 

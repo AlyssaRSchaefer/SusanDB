@@ -91,14 +91,14 @@ body {
     padding: 5px 60px;
 }
 
-.confirm-button, .select {
+.confirm-button, .select, .text-input {
     margin: 5px;
     width: 400px;
     border-radius: 5px;
     box-sizing: border-box;
 }
 
-.select {
+.select, .text-input {
     padding: 5px;
     text-align: left;
     font: var(--font-secondary);
@@ -106,7 +106,7 @@ body {
     border: none;
 }
 
-.select:focus {
+.select:focus, .text-input {
     border: 2px solid var(--primary-color);
     outline: none;
 }

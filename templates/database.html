@@ -19,7 +19,7 @@
             <div class="database-controls-right">
                 <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
                 <a href="{{ url_for('layout') }}"><div class="button secondary-button">LAYOUT</div></a>
-                <div class="button secondary-button">EDIT DATABASE</div>
+                <a href="{{ url_for('add_field') }}"><div class="button secondary-button">EDIT DATABASE</div></a>
                 <div class="button primary-button" onclick="openGenerateReportPage()">GENERATE REPORT</div>
             </div>
         </div>
