@@ -1,5 +1,4 @@
 from flask import Flask, g, session, render_template, jsonify, request
-import os
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -13,6 +12,7 @@ from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
 from fpdf import FPDF
+import os
 
 
 from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
@@ -165,6 +165,7 @@ def get_all_fields():
 
 @app.route('/generate_report', methods=['GET', 'POST'])
 def generate_report():
+
     if request.method == 'GET':
         #TODO: LOAD IN DYNAMICALLY
         all_fields = get_all_fields()
@@ -172,56 +173,35 @@ def generate_report():
 
         return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
     if request.method == 'POST':
-
-        student_ids = session.get('selected_students', [])
-        #students_ids = get_students_by_ids(selected_students)
+        student_ids = request.args.getlist('ids[]')
 
         try:
             # Get JSON data from frontend
             data = request.json
             selected_fields = data.get("fields", [])
 
+            print(student_ids)
+
             if not selected_fields:
                 return jsonify({"success": False, "error": "No fields selected"}), 400
             
-            file_content = download_file_from_share_url(session["access_token"], STUDENT_DB_URL)
-            if file_content is None:
-                return "Failed to download the Excel file from OneDrive."
+            student_data = get_students_by_ids(student_ids, selected_fields)
 
+            # Generate PDF using PyWebView's file dialog
+            pdf_path = generate_pdf(student_data, selected_fields)
+
+            if not pdf_path:
+                return jsonify({"success": False, "error": "User canceled save dialog"}), 400
             try:
-                # Save the database file to a temporary location
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-                    temp_db.write(file_content)
-                    temp_db_path = temp_db.name  # Store the file path
+                os.startfile(pdf_path)
+            except:
+                print("can't open it")
 
-                    # Open SQLite database
-                    conn = sqlite3.connect(temp_db_path)
-                    cursor = conn.cursor()
-
-                    # Fetch student data for selected IDs and fields
-                    fields_str = ", ".join(selected_fields)
-                    placeholders = ", ".join("?" for _ in student_ids)
-                    query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
-                    cursor.execute(query, student_ids)
-                    student_data = cursor.fetchall()
-
-                    # Close database connection
-                    conn.close()
-
-                    # Generate PDF using PyWebView's file dialog
-                    pdf_path = generate_pdf(student_data, selected_fields)
-
-                    if not pdf_path:
-                        return jsonify({"success": False, "error": "User canceled save dialog"}), 400
-
-                    return jsonify({
-                        "success": True,
-                        "message": "Report generated successfully",
-                        "report_path": pdf_path
-                    })
-                
-            except Exception as e:
-                return jsonify({"error": f"Error reading database file: {e}"})
+            return jsonify({
+                "success": True,
+                "message": "Report generated successfully",
+                "report_path": pdf_path
+            })
 
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
@@ -242,14 +222,24 @@ def generate_pdf(data, fields):
     # Create a PDF object
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)  # Auto page break with margin
+    pdf.set_margins(20, 15, 20)  # (left, top, right) margins
 
     for student in data:
         pdf.add_page()  # Add a new page for each student
 
         # Set font for the title
         pdf.set_font("Times", style="B", size=16)
-        pdf.cell(0, 10, f"Student Report - {student[0]}", ln=True, align="C")  # Student name as title
-        pdf.ln(10)  # Add some space after the title
+
+        # Find the index where "name" appears in fields (case-insensitive)
+        name_index = next((i for i, field in enumerate(fields) if "name" in field.lower()), None)
+
+        if name_index is not None:  # If "name" is found in fields
+            title = f"Student Report - {student[name_index]}"
+        else:
+            title = "Student Report"
+
+        pdf.cell(0, 10, title, ln=True, align="C")  # Use the correct title
+        pdf.ln(5)  # Add some space after the title
 
         # Set font for the table
         pdf.set_font("Times", size=12)
@@ -579,6 +569,16 @@ def get_students_by_ids(ids):
     cursor = db.execute(query, ids)
     students = [dict(row) for row in cursor.fetchall()]
     return students
+
+def get_students_by_ids(ids, selected_fields):
+    db = get_db()
+    # Fetch student data for selected IDs and fields
+    fields_str = ", ".join(selected_fields)
+    placeholders = ", ".join("?" for _ in ids)
+    query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
+    cursor=db.execute(query, ids)
+    student_data = cursor.fetchall()
+    return student_data
 
 # MSAL app setup
 def _build_msal_app():

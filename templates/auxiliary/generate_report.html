@@ -233,14 +233,18 @@
           return;
       }
 
-      const fields = templatesDict[currentTemplate];
+      const fields = [];
+      document.querySelectorAll(".templates-field-name").forEach(fieldCell => {
+          const fieldName = fieldCell.textContent.trim();
+          if (fieldName) fields.push(fieldName);
+      });
 
       if (fields.length === 0) {
           alert("No fields selected for the report.");
           return;
       }
-
-      fetch('/generate_report', {
+      const queryString = window.location.search; // Get existing query params
+      fetch(`/generate_report${queryString}`, {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json'
@@ -253,7 +257,18 @@
       .then(response => response.json())
       .then(data => {
           if (data.success) {
-              alert("Report generated successfully!");
+              alert("Report generated successfully! Saved to " + data.report_path);
+
+              // Open the report in a new tab if a report URL is provided
+              if (data.report_url) {
+                  window.open(data.report_path, '_blank');
+              }
+
+              // Redirect to /database after a short delay
+              setTimeout(() => {
+                  window.location.href = "/database";
+              }, 1000); // Adjust the delay if needed
+              
           } else {
               alert("Error generating report: " + data.error);
           }

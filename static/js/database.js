@@ -159,33 +159,47 @@ function sortTableByField(field){
 }
 
 /* LOGIC TO SEND DATA TO OTHER PAGES */
-function storeSelectedStudents(){
-    return fetch('/store-selected-students', {  // Added "return" here
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ selectedStudents: selectedStudents })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json(); // Ensure response is processed
-    })
-    .catch(error => console.error('Error:', error));
-}
+// function storeSelectedStudents(){
+//     return fetch('/store-selected-students', {  // Added "return" here
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ selectedStudents: selectedStudents })
+//     })
+//     .then(response => {
+//         if (!response.ok) {
+//             throw new Error('Network response was not ok');
+//         }
+//         return response.json(); // Ensure response is processed
+//     })
+//     .catch(error => console.error('Error:', error));
+// }
 
-function openGenerateReportPage(){
-    if (selectedStudents.length === 0){
+// function openGenerateReportPage(){
+//     if (selectedStudents.length === 0){
+//         return;
+//     }
+    
+//     storeSelectedStudents()
+//     .then(() => {
+//         window.location.href = '/generate_report'; 
+//     })
+//     .catch(error => console.error('Error:', error));
+// }
+
+// now sends as query params
+function openGenerateReportPage() {
+    if (selectedStudents.length === 0) {
         return;
     }
-    
-    storeSelectedStudents()
-    .then(() => {
-        window.location.href = '/generate_report'; 
-    })
-    .catch(error => console.error('Error:', error));
+
+    // Convert selected student IDs into a query string
+    const queryString = selectedStudents.map(id => `ids[]=${encodeURIComponent(id)}`).join('&');
+    console.log(queryString)
+
+    // Redirect to the report page with the selected student IDs as query parameters
+    window.location.href = `/generate_report?${queryString}`;
 }
 
 function openDetailsPage(){
