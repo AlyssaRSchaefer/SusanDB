@@ -200,6 +200,28 @@ function openDetailsPage(){
     .catch(error => console.error('Error:', error));
 }
 
+function deleteStudents() {
+    fetch('/delete_students_from_db', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: selectedStudents })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            fetchData();
+            alert("Students deleted successfully!");
+        } else if (data.error) {
+            console.error("Error:", data.error);
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => console.error("Fetch error:", error));
+}
+
+
 /* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
     const tableHeader = document.querySelector('table thead');

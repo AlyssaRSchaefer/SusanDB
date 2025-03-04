@@ -57,29 +57,46 @@ def login():
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
-            return render_template("database.html")
+            return render_template("database.html", delete_mode=False)
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
 @app.route('/logout')
 def logout():
     session.clear()
-
     return redirect(url_for('index'))
         
-# Define a route for the home page
-
 @app.route('/')
 def index():
     return render_template("login.html")
 
 @app.route('/database')
 def database():
-    return render_template("database.html")
+    return render_template("database.html", delete_mode=False)
+
+@app.route('/edit_database')
+def edit_database():
+    return render_template("auxiliary/edit_database.html", back_link="/database", heading="Edit Database")
 
 @app.route('/import')
 def import_data():
     return render_template('import.html')
+
+@app.route('/add_field')
+def add_field():
+    return render_template('auxiliary/add_field.html', back_link="/database", heading="Add New Field")
+
+@app.route('/delete_field')
+def delete_field():
+    return render_template('auxiliary/delete_field.html', back_link="/database", heading="Delete Field")
+
+@app.route('/add_student')
+def add_student():
+    return render_template('auxiliary/add_student.html', back_link="/database", heading="Add New Student")
+
+@app.route('/delete_student')
+def delete_student():
+    return render_template('database.html', delete_mode=True)
 
 def get_templates():
     templates_dict = {}
@@ -105,8 +122,11 @@ def get_templates():
     return templates_dict
 
 def get_all_fields():
-    all_fields=['id', 'name', 'age', 'grade', 'favorite_subject', 'email', 'gpa', 'extracurricular']
-    return all_fields
+    db = get_db()
+    cursor = db.execute("PRAGMA table_info(students);")
+    fields = [row[1] for row in cursor.fetchall()]
+    fields.remove("id")
+    return jsonify(fields)
 
 @app.route('/generate_report')
 def generate_report():
@@ -289,15 +309,6 @@ def delete_template_api():
     else:
         return {"error": "Error deleting the template. Please try again."}, 500
 
-
-
-# Example API endpoint
-@app.route('/api/greet', methods=['POST'])
-def greet():
-    data = request.json
-    name = data.get('name', 'Guest')  # Default to 'Guest' if no name provided
-    return jsonify(message=f"Hello, {name}!")
-
 @app.route('/layout')
 def layout():
     return render_template('auxiliary/layout.html', 
@@ -344,6 +355,9 @@ def get_db():
         g.db = sqlite3.connect(STUDENT_DB_LOCAL_PATH)
         g.db.row_factory = sqlite3.Row
     return g.db
+
+def save_db():
+    upload_file_to_onedrive(STUDENT_DB_LOCAL_PATH, STUDENT_DB_URL)
 
 def get_field_order():
     # Check if local copy exists, otherwise download
@@ -468,10 +482,7 @@ def query_db(sort, filter_params, search_term):
 
 @app.route('/get_student_fields', methods=['GET'])
 def get_student_fields():
-    db = get_db()
-    cursor = db.execute("PRAGMA table_info(students);")
-    fields = [row[1] for row in cursor.fetchall()]
-    return jsonify(fields)
+    return get_all_fields()
 
 @app.route('/get_field_values', methods=['POST'])
 def get_field_values():
@@ -482,6 +493,129 @@ def get_field_values():
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
     return jsonify(values)
+
+@app.route('/add_field_to_db', methods=['POST'])
+def add_field_to_db():
+    data = request.json
+    field = data.get('field')
+    default_value = data.get('default')
+    add_to_layout = data.get('addToLayout')
+
+    db = get_db()
+    query = f"ALTER TABLE students ADD COLUMN \"{field}\" TEXT DEFAULT '{default_value}'"
+    db.execute(query)
+    db.commit()
+    db.close()
+    save_db()
+
+    if add_to_layout:
+        try:
+            # Ensure we have the latest field order file
+            if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
+                download_and_store_file(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+            # Read existing field order
+            with open(FIELD_ORDER_LOCAL_PATH, "r", encoding="utf-8") as f:
+                field_order = f.read().strip().split("\n")
+
+            # Append the new field if it's not already present
+            if field not in field_order:
+                field_order.append(field)
+
+                # Write updated field order back to the file
+                with open(FIELD_ORDER_LOCAL_PATH, "w", encoding="utf-8") as f:
+                    f.write("\n".join(field_order))
+
+                # Upload the updated field order back to OneDrive
+                upload_file_to_onedrive(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+        except Exception as e:
+            return jsonify({"error": f"Failed to update field order: {str(e)}"}), 500
+
+    return jsonify({"message": "Field added successfully."}), 200
+
+
+@app.route('/delete_field_from_db', methods=['POST'])
+def delete_field_from_db():
+    data = request.json
+    field = data.get('field')
+
+    db = get_db()
+    query = f"ALTER TABLE students DROP COLUMN \"{field}\""
+    db.execute(query)
+    db.commit()
+    db.close()
+    save_db()
+
+    try:
+        if not os.path.exists(FIELD_ORDER_LOCAL_PATH):
+            download_and_store_file(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+        with open(FIELD_ORDER_LOCAL_PATH, "r", encoding="utf-8") as f:
+            field_order = f.read().strip().split("\n")
+
+        if field in field_order:
+            field_order.remove(field)
+
+            with open(FIELD_ORDER_LOCAL_PATH, "w", encoding="utf-8") as f:
+                f.write("\n".join(field_order))
+
+            upload_file_to_onedrive(FIELD_ORDER_LOCAL_PATH, FIELDS_ORDER_URL)
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to update field order: {str(e)}"}), 500
+
+    return jsonify({"message": "Field deleted successfully."}), 200
+
+@app.route('/add_student_to_db', methods=['POST'])
+def add_student_to_db():
+    data = request.form.to_dict()  # Extract form data as a dictionary
+
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    db = get_db()
+    columns = ", ".join(data.keys())
+    placeholders = ", ".join("?" for _ in data)
+    query = f"INSERT INTO students ({columns}) VALUES ({placeholders})"
+    
+    try:
+        db.execute(query, tuple(data.values()))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+    save_db()
+    return render_template("database.html", delete_mode=False)
+
+@app.route('/delete_students_from_db', methods=['POST'])
+def delete_students_from_db():
+    data = request.json
+    student_ids = data.get("ids")
+
+    if not student_ids:
+        return jsonify({"error": "No student IDs provided"}), 400
+
+    db = get_db()
+    
+    try:
+        # Create a placeholder for each student ID
+        placeholders = ", ".join("?" for _ in student_ids)
+        query = f"DELETE FROM students WHERE id IN ({placeholders})"
+        
+        db.execute(query, tuple(student_ids))  # Pass as tuple
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+    
+    save_db()
+    return jsonify({"message": "Students deleted successfully."}), 200
 
 def get_students_by_ids(ids):
     db = get_db()
