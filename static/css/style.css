@@ -51,23 +51,24 @@ body {
     cursor: pointer;
 }
 
-.primary-button, .confirm-button {
+.primary-button, .primary-confirm-button {
     background-color: var(--primary-color);
-    color: var(--tertiary-color)
+    color: var(--tertiary-color);
 }
 
-.primary-button:hover, .confirm-button:hover {
+.primary-button:hover, .primary-confirm-button:hover {
     background-color: var(--primary-color-highlight);
     cursor: pointer;
 }
 
-.secondary-button, .pill {
+.secondary-button, .pill, .secondary-confirm-button {
     background-color: var(--tertiary-color);
     color: var(--quarternary-color);
 }
 
-.secondary-button:hover {
+.secondary-button:hover, .secondary-confirm-button:hover {
     background-color: var(--secondary-color-highlight);
+    cursor: pointer;
 }
 
 .pill {
@@ -106,7 +107,7 @@ body {
     border: none;
 }
 
-.select:focus, .text-input {
+.select:focus, .text-input, .secondary-confirm-button {
     border: 2px solid var(--primary-color);
     outline: none;
 }
@@ -204,6 +205,7 @@ a {
     color: var(--quarternary-color);
     font-size: 3rem;
     font-weight: 300;
+    margin-bottom: 20px;
 }
 
 .back-icon {

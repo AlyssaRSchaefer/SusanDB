@@ -1,0 +1,38 @@
+{% extends 'auxiliary.html' %}
+
+{% block title %}Add Field Page{% endblock %}
+
+{% block content %}
+
+<!-- ADD FIELD MODE -->
+{% if mode == "add_field" %}
+    <input id="add-field-name" class="text-input" type="text" placeholder="Name of New Field">
+    <input id="add-field-default" class="text-input" type="text" placeholder="Default Field Value">
+    <label for="add-to-layout">
+        <input id="add-field-layout" type="checkbox" name="add-to-layout">
+        Add Field to Database Layout
+    </label>
+    <div class="primary-confirm-button confirm-button" onclick="addNewField()">CONFIRM</div>
+{% endif %}
+
+<!-- DELETE FIELD MODE-->
+{% if mode == "delete_field" %}
+    <select class="select" name="delete-field-select" id="delete-field-select"></select>
+    <div class="primary-confirm-button confirm-button" onclick="deleteField()">CONFIRM</div>
+{% endif %}
+
+<!-- ADD STUDENT MODE-->
+{% if mode == "add_student" %}
+    <form id="add-student-form" action="/add_student_to_db" method="POST">
+
+    </form>
+    <div class="primary-confirm-button confirm-button" onclick="addStudent()">CONFIRM</div>
+{% endif %}
+
+<!-- DELETE STUDENT MODE IS PART OF THE DATABASE PAGE -->
+
+{% endblock %}
+
+{% block script %}
+<script src="static/js/edit-database.js"></script>  <!-- Default script -->
+{% endblock %}

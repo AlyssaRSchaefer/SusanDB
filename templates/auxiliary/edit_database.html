@@ -4,9 +4,10 @@
 
 {% block content %}
 
-<a href="{{ url_for('add_field') }}"><div class="confirm-button">ADD NEW FIELD</div></a>
-<a href="{{ url_for('delete_field') }}"><div class="confirm-button">DELETE FIELD</div></a>
-<a href="{{ url_for('add_student') }}"><div class="confirm-button">ADD NEW STUDENT</div></a>
-<a href="{{ url_for('delete_student') }}"><div class="confirm-button">DELETE STUDENTS</div></a>
+<a href="{{ url_for('add_field') }}"><div class="secondary-confirm-button confirm-button">ADD NEW FIELD</div></a>
+<a href="{{ url_for('delete_field') }}"><div class="secondary-confirm-button confirm-button">DELETE FIELD</div></a>
+<a href="{{ url_for('add_student') }}"><div class="secondary-confirm-button confirm-button">ADD NEW STUDENT</div></a>
+<a href="{{ url_for('delete_student') }}"><div class="secondary-confirm-button confirm-button">DELETE STUDENTS</div></a>
+<a href="{{ url_for('database') }}"><div class="primary-confirm-button confirm-button">BACK TO DATABASE</div></a>
 
 {% endblock %}
