@@ -74,6 +74,10 @@ def index():
 def database():
     return render_template("database.html", delete_mode=False)
 
+@app.route('/edit_database')
+def edit_database():
+    return render_template("auxiliary/edit_database.html", back_link="/database", heading="Edit Database")
+
 @app.route('/import')
 def import_data():
     return render_template('import.html')

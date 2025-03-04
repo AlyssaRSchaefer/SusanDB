@@ -1,0 +1,12 @@
+{% extends 'auxiliary.html' %}
+
+{% block title %}Edit Database Confirmation Page{% endblock %}
+
+{% block content %}
+
+<a href="{{ url_for('add_field') }}"><div class="confirm-button">ADD NEW FIELD</div></a>
+<a href="{{ url_for('delete_field') }}"><div class="confirm-button">DELETE FIELD</div></a>
+<a href="{{ url_for('add_student') }}"><div class="confirm-button">ADD NEW STUDENT</div></a>
+<a href="{{ url_for('delete_student') }}"><div class="confirm-button">DELETE STUDENTS</div></a>
+
+{% endblock %}

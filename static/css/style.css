@@ -111,6 +111,10 @@ body {
     outline: none;
 }
 
+a {
+    text-decoration: none;
+}
+
 /* NAVIGATION BAR */
 .navbar {
     background-color: var(--primary-color);
