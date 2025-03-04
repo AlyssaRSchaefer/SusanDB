@@ -5,7 +5,7 @@ function generateErrorMessage(msg, container){
 }
 
 function addNewField() {
-    let name = document.getElementById("add-field-name").value;
+    let name = document.getElementById("add-field-name").value.replaceAll(" ", "_");
     let defaultValue = document.getElementById("add-field-default").value;
     let addToLayout = document.getElementById("add-field-layout").checked;
 

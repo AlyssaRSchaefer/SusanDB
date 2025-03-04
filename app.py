@@ -84,15 +84,15 @@ def import_data():
 
 @app.route('/add_field')
 def add_field():
-    return render_template('auxiliary/add_field.html', back_link="/database", heading="Add New Field")
+    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Add New Field", mode="add_field")
 
 @app.route('/delete_field')
 def delete_field():
-    return render_template('auxiliary/delete_field.html', back_link="/database", heading="Delete Field")
+    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Delete Field", mode="delete_field")
 
 @app.route('/add_student')
 def add_student():
-    return render_template('auxiliary/add_student.html', back_link="/database", heading="Add New Student")
+    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Add New Student", mode="add_student")
 
 @app.route('/delete_student')
 def delete_student():
