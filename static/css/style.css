@@ -358,7 +358,7 @@ td, th {
     background-color: var(--tertiary-color);
 }
 
-.database-checkbox, #select-all-checkbox {
+.database-checkbox, #select-all-checkbox, #add-field-layout {
     appearance: none; /* Remove default styles */
     border: 0.5px solid var(--quarternary-color);
     border-radius: 0px;
@@ -367,16 +367,25 @@ td, th {
     cursor: pointer;
 }
 
-.database-checkbox:checked, #select-all-checkbox {
+.database-checkbox:checked, #select-all-checkbox, #add-field-layout {
     background-color: var(--secondary-color-highlight);
 }
 
-.database-checkbox:checked::after, #select-all-checkbox:checked::after {
+.database-checkbox:checked::after, #select-all-checkbox:checked::after, #add-field-layout:checked::after {
     content: "✔"; /* Unicode checkmark */
     font-size: 16px;
     color: var(--primary-color);
     position: relative;
     bottom: 4px;
+}
+
+#add-field-layout {
+    position: relative;
+    top: 4px;
+}
+
+.database-label {
+    color: var(--quarternary-color);
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */

@@ -96,7 +96,7 @@ function selectStudent(id){
         selectedStudents.push(id);
         row.classList.add("database-selected-row"); 
     } else {
-        selectedStudents.filter(studentID => studentID !== id);
+        selectedStudents = selectedStudents.filter(studentID => studentID !== id);
         row.classList.remove("database-selected-row");
     }
 }
