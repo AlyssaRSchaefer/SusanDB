@@ -259,7 +259,7 @@ a {
     width: 100%;
     overflow-x: auto;
     white-space: nowrap;
-    scrollbar-color: var(--secondary-color-highlight) var(--secondary-color);
+    scrollbar-color: var(--primary-color) var(--secondary-color);
     scrollbar-width: thin;
 }
 

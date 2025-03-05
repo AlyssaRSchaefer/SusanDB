@@ -29,6 +29,12 @@
     <div class="primary-confirm-button confirm-button" onclick="addStudent()">CONFIRM</div>
 {% endif %}
 
+<!-- ADD STUDENT RESULT MODE-->
+{% if mode == "add_student_result" %}
+    <a href="{{ url_for('add_student') }}"><div class="secondary-confirm-button confirm-button">ADD ANOTHER STUDENT</div></a>
+    <a href="{{ url_for('database') }}"><div class="primary-confirm-button confirm-button">BACK TO DATABASE</div></a>
+{% endif %}
+
 <!-- DELETE STUDENT MODE IS PART OF THE DATABASE PAGE -->
 
 {% endblock %}
