@@ -291,6 +291,10 @@ a {
     background-color: var(--secondary-color-highlight);
 }
 
+.database-table tbody tr.database-selected-row {
+    background-color: var(--secondary-color-highlight);
+}
+
 td, th {
     width: 150px;
     border: none;
@@ -346,22 +350,28 @@ td, th {
     background-color: var(--secondary-color);
 }
 
+#select-all-checkbox {
+    background-color: var(--secondary-color);
+}
+
 .database-checkbox {
-    appearance: none; /* Remove default styles */
     background-color: var(--tertiary-color);
+}
+
+.database-checkbox, #select-all-checkbox {
+    appearance: none; /* Remove default styles */
     border: 0.5px solid var(--quarternary-color);
     border-radius: 0px;
-    width: 15px; /* Set size */
+    width: 15px;
     height: 15px;
     cursor: pointer;
 }
 
-.database-checkbox:checked {
+.database-checkbox:checked, #select-all-checkbox {
     background-color: var(--secondary-color-highlight);
 }
 
-/* Optional: Add a custom checkmark */
-.database-checkbox:checked::after {
+.database-checkbox:checked::after, #select-all-checkbox:checked::after {
     content: "✔"; /* Unicode checkmark */
     font-size: 16px;
     color: var(--primary-color);

@@ -86,36 +86,33 @@ function closePillMenu(){
 
 /* LOGIC TO HANDLE CHECKBOXES */
 function selectStudent(id){
-    selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
+    if (allStudentsSelected) {
+        allStudentsSelected = false;
+        document.getElementById("select-all-checkbox").checked = false;
+    }
     let rowID = "database-row-" + id;
     let row = document.getElementById(rowID);
-    selectedStudents.includes(id) ? row.style.backgroundColor = "var(--secondary-color-highlight)" : row.style.backgroundColor = "var(--tertiary-color)";
+    if (!selectedStudents.includes(id)) {
+        selectedStudents.push(id);
+        row.classList.add("database-selected-row"); 
+    } else {
+        selectedStudents.filter(studentID => studentID !== id);
+        row.classList.remove("database-selected-row");
+    }
 }
 
-function selectAll(){
-    newBackgroundColor = ""
-    newCheckedStatus = true;
-
-    if (allStudentsSelected === false){
-        selectedStudents = studentIDs;
-        newBackgroundColor = "var(--secondary-color-highlight)";
-        allStudentsSelected = true;
-    }
-    else {
-        selectedStudents = [];
-        newBackgroundColor = "var(--tertiary-color)";
-        newCheckedStatus = false;
-        allStudentsSelected = false;
-    }
+function selectAll() {
+    allStudentsSelected = !allStudentsSelected;
+    selectedStudents = allStudentsSelected ? [...studentIDs] : [];
     
     const checkboxes = document.querySelectorAll('.database-checkbox');
     checkboxes.forEach(checkbox => {
-        checkbox.checked = newCheckedStatus; // Set each checkbox as checked
+        checkbox.checked = allStudentsSelected; // Check/uncheck all
     });
-
-    const rows = document.querySelectorAll('.database-table tr');
-    rows.forEach((row) => {
-        row.style.backgroundColor = newBackgroundColor;
+    
+    const rows = document.querySelectorAll('.database-table tbody tr');
+    rows.forEach(row => {
+        row.classList.toggle("database-selected-row", allStudentsSelected);
     });
 }
 
