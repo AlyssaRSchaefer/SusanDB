@@ -13,6 +13,7 @@ from io import BytesIO
 import re
 from fpdf import FPDF
 import os
+import json
 
 
 from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
@@ -134,8 +135,7 @@ def get_all_fields():
 def generate_report():
 
     if request.method == 'GET':
-        #TODO: LOAD IN DYNAMICALLY
-        all_fields = get_all_fields()
+        all_fields = json.loads(get_all_fields().data)
         templates_dict = get_templates()
 
         return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
@@ -231,8 +231,7 @@ def generate_pdf(data, fields):
 
 @app.route('/templates')
 def templates():
-    #TODO: LOAD IN DYNAMICALLY
-    all_fields = get_all_fields()
+    all_fields = json.loads(get_all_fields().data)
     templates_dict = get_templates()
     
     # Pass the dictionary to the template
