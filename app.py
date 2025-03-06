@@ -410,7 +410,7 @@ def layout():
 @app.route('/details')
 def details():
     selected_students = session.get('selected_students', [])
-    students = get_students_by_ids(selected_students)
+    students = get_students_by_ids(selected_students, [])
     return render_template('auxiliary/details.html',
                            heading=students[0]["name"],  # Assuming only one student
                            back_link="/database",
@@ -700,18 +700,13 @@ def delete_students_from_db():
     save_db()
     return jsonify({"message": "Students deleted successfully."}), 200
 
-def get_students_by_ids(ids):
-    db = get_db()
-    placeholders = ",".join("?" for _ in ids)
-    query = f"SELECT * FROM students WHERE id IN ({placeholders})"
-    cursor = db.execute(query, ids)
-    students = [dict(row) for row in cursor.fetchall()]
-    return students
-
 def get_students_by_ids(ids, selected_fields):
     db = get_db()
     # Fetch student data for selected IDs and fields
-    fields_str = ", ".join(selected_fields)
+    if not selected_fields:  # checks for an empty list
+        fields_str = "*"
+    else:
+        fields_str = ", ".join(selected_fields)
     placeholders = ", ".join("?" for _ in ids)
     query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
     cursor=db.execute(query, ids)
