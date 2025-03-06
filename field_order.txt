@@ -1,7 +1,4 @@
 name
 email
-extracurricular
 grade
 age
-gpa
-favorite_subject
