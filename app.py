@@ -754,5 +754,5 @@ if __name__ == '__main__':
     flask_thread.start()
 
     # Create a PyWebView window to load the Flask app
-    webview.create_window('SusanDB', 'http://127.0.0.1:5000')
+    webview.create_window('SusanDB', 'http://127.0.0.1:5000', fullscreen=True)
     webview.start()

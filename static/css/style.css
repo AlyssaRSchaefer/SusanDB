@@ -199,7 +199,7 @@ a {
     min-height: calc(100vh - var(--navbar-height));
 }
 
-.auxiliary h1 { 
+.auxiliary h1, .database-heading { 
     margin: 0;
     font-family: var(--font-primary);
     color: var(--quarternary-color);
@@ -219,11 +219,21 @@ a {
 }
 
 /* DATABASE PAGE */
+.database-heading {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+    margin-top: 25px;
+}
+
+.database-heading-span {
+    color: var(--primary-color);
+}
 
 .database-controls {
     display: flex;
     justify-content: space-between;
-    margin: 25px 0;
+    margin: 0 0 25px 0;
 }
 
 .database-controls-left{
