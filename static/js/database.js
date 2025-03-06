@@ -86,36 +86,33 @@ function closePillMenu(){
 
 /* LOGIC TO HANDLE CHECKBOXES */
 function selectStudent(id){
-    selectedStudents.includes(id) ? selectedStudents.pop(id) : selectedStudents.push(id)
+    if (allStudentsSelected) {
+        allStudentsSelected = false;
+        document.getElementById("select-all-checkbox").checked = false;
+    }
     let rowID = "database-row-" + id;
     let row = document.getElementById(rowID);
-    selectedStudents.includes(id) ? row.style.backgroundColor = "var(--secondary-color-highlight)" : row.style.backgroundColor = "var(--tertiary-color)";
+    if (!selectedStudents.includes(id)) {
+        selectedStudents.push(id);
+        row.classList.add("database-selected-row"); 
+    } else {
+        selectedStudents = selectedStudents.filter(studentID => studentID !== id);
+        row.classList.remove("database-selected-row");
+    }
 }
 
-function selectAll(){
-    newBackgroundColor = ""
-    newCheckedStatus = true;
-
-    if (allStudentsSelected === false){
-        selectedStudents = studentIDs;
-        newBackgroundColor = "var(--secondary-color-highlight)";
-        allStudentsSelected = true;
-    }
-    else {
-        selectedStudents = [];
-        newBackgroundColor = "var(--tertiary-color)";
-        newCheckedStatus = false;
-        allStudentsSelected = false;
-    }
+function selectAll() {
+    allStudentsSelected = !allStudentsSelected;
+    selectedStudents = allStudentsSelected ? [...studentIDs] : [];
     
     const checkboxes = document.querySelectorAll('.database-checkbox');
     checkboxes.forEach(checkbox => {
-        checkbox.checked = newCheckedStatus; // Set each checkbox as checked
+        checkbox.checked = allStudentsSelected; // Check/uncheck all
     });
-
-    const rows = document.querySelectorAll('.database-table tr');
-    rows.forEach((row) => {
-        row.style.backgroundColor = newBackgroundColor;
+    
+    const rows = document.querySelectorAll('.database-table tbody tr');
+    rows.forEach(row => {
+        row.classList.toggle("database-selected-row", allStudentsSelected);
     });
 }
 
@@ -158,7 +155,7 @@ function sortTableByField(field){
     fetchData(sort, filter, search);
 }
 
-/* LOGIC TO SEND DATA TO OTHER PAGES */
+/* Details page uses this to store selected student id in session*/
 function storeSelectedStudents(){
     return fetch('/store-selected-students', {  // Added "return" here
         method: 'POST',
@@ -176,20 +173,22 @@ function storeSelectedStudents(){
     .catch(error => console.error('Error:', error));
 }
 
-function openGenerateReportPage(){
-    if (selectedStudents.length === 0){
+function openGenerateReportPage() {
+    if (selectedStudents.length === 0) {
+        alert("Please select at least one student to generate a report.");
         return;
     }
-    
-    storeSelectedStudents()
-    .then(() => {
-        window.location.href = '/generate-report'; 
-    })
-    .catch(error => console.error('Error:', error));
+
+    // Convert selected student IDs into a query string
+    const queryString = selectedStudents.map(id => `ids[]=${encodeURIComponent(id)}`).join('&');
+
+    // Redirect to the report page with the selected student IDs as query parameters
+    window.location.href = `/generate_report?${queryString}`;
 }
 
 function openDetailsPage(){
     if (!(selectedStudents.length === 1)){
+        alert("Please select exactly one student to view their details");
         return;
     }
     

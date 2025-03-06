@@ -259,7 +259,7 @@ a {
     width: 100%;
     overflow-x: auto;
     white-space: nowrap;
-    scrollbar-color: var(--secondary-color-highlight) var(--secondary-color);
+    scrollbar-color: var(--primary-color) var(--secondary-color);
     scrollbar-width: thin;
 }
 
@@ -288,6 +288,10 @@ a {
 }
 
 .database-column-name:hover {
+    background-color: var(--secondary-color-highlight);
+}
+
+.database-table tbody tr.database-selected-row {
     background-color: var(--secondary-color-highlight);
 }
 
@@ -344,6 +348,53 @@ td, th {
 
 .database-highlight {
     background-color: var(--secondary-color);
+}
+
+#select-all-checkbox {
+    background-color: var(--secondary-color);
+}
+
+.database-checkbox {
+    background-color: var(--tertiary-color);
+}
+
+.database-checkbox, #select-all-checkbox, #add-field-layout {
+    appearance: none; /* Remove default styles */
+    border: 0.5px solid var(--quarternary-color);
+    border-radius: 0px;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.database-checkbox:checked, #select-all-checkbox, #add-field-layout {
+    background-color: var(--secondary-color-highlight);
+}
+
+.database-checkbox:checked::after, #select-all-checkbox:checked::after, #add-field-layout:checked::after {
+    content: "✔";
+    font-size: 16px;
+    color: var(--primary-color);
+    position: relative;
+    bottom: 4px;
+}
+
+#add-field-layout {
+    position: relative;
+    top: 4px;
+}
+
+.database-label {
+    color: var(--quarternary-color);
+}
+
+.database-popup-button {
+    font-family: var(--font-secondary);
+    border: none;
+    height: 30px;
+    min-width: 25vw;
+    border-radius: 2px;
+    margin-bottom: 5px;
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
@@ -551,7 +602,7 @@ td, th {
     padding: 5px;
   }
 
-  .popup-button:hover {
+  .popup-button:hover, .database-popup-button {
     cursor: pointer;
   }
 

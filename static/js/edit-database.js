@@ -1,23 +1,27 @@
 let fields = []
 
-function generateErrorMessage(msg, container){
-
+function generateErrorMessage(msg){
+    alert(msg);
 }
 
 function addNewField() {
+
     let name = document.getElementById("add-field-name").value.replaceAll(" ", "_");
     let defaultValue = document.getElementById("add-field-default").value;
     let addToLayout = document.getElementById("add-field-layout").checked;
 
     if (name.length === 0) {
-        generateErrorMessage("The name of the new field cannot be blank.", "add-field-error-msg");
+        generateErrorMessage("The name of the new field cannot be blank.");
         return;
     }
 
     if (fields.includes(name)) {
-        generateErrorMessage("The database already contains a field with this name.", "add-field-error-msg");
+        generateErrorMessage("The database already contains a field with this name.");
         return;
     }
+
+    openFieldPopup();
+    clearAddFieldForm();
 
     fetch('/add_field_to_db', {
         method: 'POST',
@@ -41,6 +45,14 @@ function addNewField() {
 
 function deleteField(){
     let field = document.getElementById("delete-field-select").value;
+
+    if (field == "") {
+        generateErrorMessage("Please choose a valid field.");
+        return;
+    }
+
+    openFieldPopup();
+    removeFieldFromSelect(field);
     fetch('/delete_field_from_db', {
         method: 'POST',
         headers: {
@@ -54,11 +66,6 @@ function deleteField(){
         }
         return response.json();
     })
-    .then(data => {
-        console.log("Success:", data.message);
-        alert("Field deleted successfully.");
-        getAllFields(); // Refresh the field list after deletion
-    })
     .catch(error => {
         console.error("Error:", error);
         alert(`Error deleting field: ${error.message}`);
@@ -67,6 +74,20 @@ function deleteField(){
 
 function addStudent(){
     document.getElementById("add-student-form").submit();
+}
+
+function openFieldPopup() {
+    document.getElementById("field-popup").style.display = "flex";
+}
+
+function closeFieldPopup() {
+    document.getElementById("field-popup").style.display = "none";
+}
+
+function clearAddFieldForm(){
+    document.getElementById("add-field-name").value="";
+    document.getElementById("add-field-default").value="";
+    document.getElementById("add-field-layout").checked = false;
 }
 
 function getAllFields() {
@@ -84,6 +105,14 @@ function getAllFields() {
         .catch(error => {
             console.error("Error loading fields:", error);
         });
+}
+
+function removeFieldFromSelect(field) {
+    let select = document.getElementById("delete-field-select");
+    let optionToRemove = select.querySelector(`option[value="${field}"]`);
+    if (optionToRemove) {
+        select.removeChild(optionToRemove);
+    }
 }
 
 function populateDeleteFieldSelect() {
