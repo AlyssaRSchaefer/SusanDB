@@ -6,6 +6,16 @@
 
 <!-- ADD FIELD MODE -->
 {% if mode == "add_field" %}
+    <div id="field-popup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <h3 class="templates-popup-header">Field Added</h3>
+            <div>
+                <button class="primary-button database-popup-button" onclick="closeFieldPopup()">ADD ANOTHER FIELD</button>
+                <a href="{{ url_for('database') }}"><button class="primary-button database-popup-button">BACK TO DATABASE</button></a>
+            </div>
+        </div>
+    </div>
+
     <input id="add-field-name" class="text-input" type="text" placeholder="Name of New Field">
     <input id="add-field-default" class="text-input" type="text" placeholder="Default Field Value (can be blank)">
     <label class="database-label" for="add-to-layout">
@@ -17,6 +27,16 @@
 
 <!-- DELETE FIELD MODE-->
 {% if mode == "delete_field" %}
+    <div id="field-popup" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <h3 class="templates-popup-header">Field Deleted</h3>
+            <div>
+                <button class="primary-button database-popup-button" onclick="closeFieldPopup()">DELETE ANOTHER FIELD</button>
+                <a href="{{ url_for('database') }}"><button class="primary-button database-popup-button">BACK TO DATABASE</button></a>
+            </div>
+        </div>
+    </div>
+
     <select class="select" name="delete-field-select" id="delete-field-select"></select>
     <div class="primary-confirm-button confirm-button" onclick="deleteField()">CONFIRM</div>
 {% endif %}

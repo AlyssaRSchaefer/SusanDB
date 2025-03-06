@@ -372,7 +372,7 @@ td, th {
 }
 
 .database-checkbox:checked::after, #select-all-checkbox:checked::after, #add-field-layout:checked::after {
-    content: "✔"; /* Unicode checkmark */
+    content: "✔";
     font-size: 16px;
     color: var(--primary-color);
     position: relative;
@@ -386,6 +386,15 @@ td, th {
 
 .database-label {
     color: var(--quarternary-color);
+}
+
+.database-popup-button {
+    font-family: var(--font-secondary);
+    border: none;
+    height: 30px;
+    min-width: 25vw;
+    border-radius: 2px;
+    margin-bottom: 5px;
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
@@ -593,7 +602,7 @@ td, th {
     padding: 5px;
   }
 
-  .popup-button:hover {
+  .popup-button:hover, .database-popup-button {
     cursor: pointer;
   }
 

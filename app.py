@@ -589,7 +589,7 @@ def add_student_to_db():
         db.close()
 
     save_db()
-    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Student Added", mode="add_student_result")
+    return render_template('auxiliary/edit_database_action', back_link="/database", heading="Student Added", mode="add_student_result")
 
 @app.route('/delete_students_from_db', methods=['POST'])
 def delete_students_from_db():
