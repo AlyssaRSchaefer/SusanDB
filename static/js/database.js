@@ -310,9 +310,26 @@ function fetchData(sort = { name: 'ASC' }, filter = [], search="") {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
+                    input.classList.add("database-cell-input");
+                    input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
                     td.innerHTML = '';
                     td.appendChild(input);
                     input.focus();
+                
+                    function resizeInput() {
+                        const span = document.createElement("span");
+                        span.style.visibility = "hidden";
+                        span.style.whiteSpace = "pre";
+                        span.style.font = getComputedStyle(input).font;
+                        span.textContent = input.value || " "; // Avoid width collapse
+                        document.body.appendChild(span);
+                
+                        input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
+                        document.body.removeChild(span);
+                    }
+                
+                    input.addEventListener("input", resizeInput);
+                    resizeInput(); // Initial resize based on current text
 
                     // Save the edited value when user presses Enter
                     input.onblur = function () {
@@ -366,7 +383,7 @@ function populateValueSelect(selectedField) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ field: selectedField }) // Corrected JSON key
+        body: JSON.stringify({ field: selectedField })
     })
     .then(response => response.json())
     .then(data => {
