@@ -1,5 +1,4 @@
 from flask import Flask, g, session, render_template, jsonify, request
-import os
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -12,6 +11,10 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
+from fpdf import FPDF
+import os
+import json
+
 
 from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 
@@ -128,18 +131,107 @@ def get_all_fields():
     fields.remove("id")
     return jsonify(fields)
 
-@app.route('/generate_report')
+@app.route('/generate_report', methods=['GET', 'POST'])
 def generate_report():
-    #TODO: LOAD IN DYNAMICALLY
-    all_fields = get_all_fields()
-    templates_dict = get_templates()
 
-    return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
+    if request.method == 'GET':
+        all_fields = json.loads(get_all_fields().data)
+        templates_dict = get_templates()
+
+        return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
+    if request.method == 'POST':
+        student_ids = request.args.getlist('ids[]')
+
+        try:
+            # Get JSON data from frontend
+            data = request.json
+            selected_fields = data.get("fields", [])
+
+            print(student_ids)
+
+            if not selected_fields:
+                return jsonify({"success": False, "error": "No fields selected"}), 400
+            
+            student_data = get_students_by_ids(student_ids, selected_fields)
+
+            # Generate PDF using PyWebView's file dialog
+            pdf_path = generate_pdf(student_data, selected_fields)
+
+            if not pdf_path:
+                return jsonify({"success": False, "error": "User canceled save dialog"}), 400
+            try:
+                os.startfile(pdf_path)
+            except:
+                print("can't open it")
+
+            return jsonify({
+                "success": True,
+                "message": "Report generated successfully",
+                "report_path": pdf_path
+            })
+
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+
+def generate_pdf(data, fields):
+    """Generate a PDF report with individual student tables on separate pages using FPDF."""
+    file_types = ('PDF (*.pdf)', 'All files (*.*)')
+    file_path = webview.windows[0].create_file_dialog(
+        webview.SAVE_DIALOG,
+        file_types=file_types
+    )
+
+    if not file_path:
+        return None
+    if isinstance(file_path, list):
+        file_path = file_path[0]
+
+    # Create a PDF object
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)  # Auto page break with margin
+    pdf.set_margins(20, 15, 20)  # (left, top, right) margins
+
+    for student in data:
+        pdf.add_page()  # Add a new page for each student
+
+        # Set font for the title
+        pdf.set_font("Times", style="B", size=16)
+
+        # Find the index where "name" appears in fields (case-insensitive)
+        name_index = next((i for i, field in enumerate(fields) if "name" in field.lower()), None)
+
+        if name_index is not None:  # If "name" is found in fields
+            title = f"Student Report - {student[name_index]}"
+        else:
+            title = "Student Report"
+
+        pdf.cell(0, 10, title, ln=True, align="C")  # Use the correct title
+        pdf.ln(5)  # Add some space after the title
+
+        # Set font for the table
+        pdf.set_font("Times", size=12)
+
+        # Create a table for the student's data
+        for field, value in zip(fields, student):
+            # Add field name in bold
+            pdf.set_font("Times", style="B", size=12)
+            pdf.cell(60, 10, field, border=1)
+
+            # Add value with text wrapping
+            pdf.set_font("Times", size=12)
+            pdf.multi_cell(0, 10, str(value), border=1)
+            pdf.ln(0)  # Reset line break after multi_cell
+
+        pdf.ln(10)  # Add some space between students
+
+    # Save the PDF
+    pdf.output(file_path)
+    return file_path
+
 
 @app.route('/templates')
 def templates():
-    #TODO: LOAD IN DYNAMICALLY
-    all_fields = get_all_fields()
+    all_fields = json.loads(get_all_fields().data)
     templates_dict = get_templates()
     
     # Pass the dictionary to the template
@@ -323,15 +415,6 @@ def details():
                            heading=students[0]["name"],  # Assuming only one student
                            back_link="/database",
                            student=students)
-
-@app.route('/generate-report')
-def generate_report2():
-    selected_students = session.get('selected_students', [])
-    students = get_students_by_ids(selected_students)
-    return render_template('auxiliary/generate-report.html',
-                            heading = "Generate Report",
-                            back_link="/database",
-                            students = students)
 
 @app.route('/store-selected-students', methods=['POST'])
 def store_selected_students():
@@ -624,6 +707,16 @@ def get_students_by_ids(ids):
     cursor = db.execute(query, ids)
     students = [dict(row) for row in cursor.fetchall()]
     return students
+
+def get_students_by_ids(ids, selected_fields):
+    db = get_db()
+    # Fetch student data for selected IDs and fields
+    fields_str = ", ".join(selected_fields)
+    placeholders = ", ".join("?" for _ in ids)
+    query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
+    cursor=db.execute(query, ids)
+    student_data = cursor.fetchall()
+    return student_data
 
 # MSAL app setup
 def _build_msal_app():
