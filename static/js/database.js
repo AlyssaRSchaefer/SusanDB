@@ -221,6 +221,26 @@ function deleteStudents() {
     .catch(error => console.error("Fetch error:", error));
 }
 
+/* LOGIC TO UPDATE A DATABSE VALUE WHEN THE USER EDITS A TABLE CELL */
+function updateCellData(id, field, newValue) {
+    fetch('/update_database_cell', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: id, field: field, newValue: newValue })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an issue updating the data.');
+    });
+}
 
 /* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
@@ -285,6 +305,32 @@ function fetchData(sort = { name: 'ASC' }, filter = [], search="") {
                 }
 
                 td.innerHTML = cellText;
+
+                td.ondblclick = function () {
+                    const originalText = td.innerHTML;
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
+                    td.innerHTML = '';
+                    td.appendChild(input);
+                    input.focus();
+
+                    // Save the edited value when user presses Enter
+                    input.onblur = function () {
+                        td.innerHTML = input.value;
+                        // Optionally, send the updated data to the server
+                        updateCellData(row["id"], col, input.value);
+                    };
+
+                    input.onkeydown = function (e) {
+                        if (e.key === 'Enter') {
+                            td.innerHTML = input.value;
+                            // Optionally, send the updated data to the server
+                            updateCellData(row["id"], col, input.value);
+                        }
+                    };
+                };
+
                 tr.appendChild(td);
             });
 

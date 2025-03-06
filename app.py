@@ -617,6 +617,30 @@ def delete_students_from_db():
     save_db()
     return jsonify({"message": "Students deleted successfully."}), 200
 
+@app.route('/update_database_cell', methods=['POST'])
+def update_database_cell():
+    data = request.json
+    id = data.get("id")
+    field = data.get("field")
+    new_value = data.get("newValue")
+
+    db = get_db()
+    try:
+        # Create the query string dynamically
+        query = f"UPDATE students SET {field} = ? WHERE id = ?"
+        
+        # Execute the query
+        db.execute(query, (new_value, id))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+    
+    save_db()
+    return jsonify({"message": "Student data updated successfully."}), 200
+
 def get_students_by_ids(ids):
     db = get_db()
     placeholders = ",".join("?" for _ in ids)
