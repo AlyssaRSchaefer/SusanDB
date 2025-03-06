@@ -220,6 +220,26 @@ function deleteStudents() {
     .catch(error => console.error("Fetch error:", error));
 }
 
+/* LOGIC TO UPDATE A DATABSE VALUE WHEN THE USER EDITS A TABLE CELL */
+function updateCellData(id, field, newValue) {
+    fetch('/update_database_cell', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: id, field: field, newValue: newValue })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("Error: " + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an issue updating the data.');
+    });
+}
 
 /* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
@@ -284,6 +304,49 @@ function fetchData(sort = { name: 'ASC' }, filter = [], search="") {
                 }
 
                 td.innerHTML = cellText;
+
+                td.ondblclick = function () {
+                    const originalText = td.innerHTML;
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
+                    input.classList.add("database-cell-input");
+                    input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
+                    td.innerHTML = '';
+                    td.appendChild(input);
+                    input.focus();
+                
+                    function resizeInput() {
+                        const span = document.createElement("span");
+                        span.style.visibility = "hidden";
+                        span.style.whiteSpace = "pre";
+                        span.style.font = getComputedStyle(input).font;
+                        span.textContent = input.value || " "; // Avoid width collapse
+                        document.body.appendChild(span);
+                
+                        input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
+                        document.body.removeChild(span);
+                    }
+                
+                    input.addEventListener("input", resizeInput);
+                    resizeInput(); // Initial resize based on current text
+
+                    // Save the edited value when user presses Enter
+                    input.onblur = function () {
+                        td.innerHTML = input.value;
+                        // Optionally, send the updated data to the server
+                        updateCellData(row["id"], col, input.value);
+                    };
+
+                    input.onkeydown = function (e) {
+                        if (e.key === 'Enter') {
+                            td.innerHTML = input.value;
+                            // Optionally, send the updated data to the server
+                            updateCellData(row["id"], col, input.value);
+                        }
+                    };
+                };
+
                 tr.appendChild(td);
             });
 
@@ -320,7 +383,7 @@ function populateValueSelect(selectedField) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ field: selectedField }) // Corrected JSON key
+        body: JSON.stringify({ field: selectedField })
     })
     .then(response => response.json())
     .then(data => {
