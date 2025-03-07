@@ -1,0 +1,21 @@
+{% extends "header.html" %}
+
+{% block title %}Admin Page{% endblock %}
+
+{% block content %}
+    <div class="admin">
+        <h1>Options</h1>
+        <div class="admin-select-container">
+            <label class="admin-label" for="admin-color-select">SELECT COLOR SCHEME:</label>
+            <select class="select" name="admin-color-select" id="admin-color-select">
+                <option value="default">Default</option>
+                <option value="ugly">Ugly</option>
+            </select>
+        </div>
+        <div class="primary-button button" id="admin-save-button" onclick="saveColorScheme()">SAVE</div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script src="static/js/admin.js"></script>
+{% endblock %}

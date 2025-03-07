@@ -18,6 +18,27 @@
     --navbar-height: 60px;
 }
 
+/* COLOR SCHEMES*/
+.default {
+    --primary-color: #AEB3CE; /* purple */
+    --primary-color-highlight: #A1A7C7;
+    --secondary-color: #E8E8E8; /* light gray */
+    --secondary-color-highlight: #F2F2F2;
+    --tertiary-color: #ffffff; /* white */
+    --quarternary-color: #747474; /* dark gray */
+}
+
+.ugly {
+    --primary-color: #C69491; /* purple */
+    --primary-color-highlight: #f9c8c2;
+    --secondary-color: #7D9094; /* light gray */
+    --secondary-color-highlight: #96aca0;
+    --tertiary-color: #ffffff; /* white */
+    --quarternary-color: #747474; /* dark gray */
+}
+
+
+
 body {
     padding: 0px;
     margin: 0;
@@ -180,7 +201,7 @@ a {
   }
 
 /* MULTIPLE PAGES */
-.database, .import, .templates, .auxiliary-content, .database-auxiliary-content {
+.database, .import, .templates, .admin, .auxiliary-content, .database-auxiliary-content {
     margin: 0 var(--horizontal-margin);
 }
 
@@ -190,7 +211,7 @@ a {
     position: relative;
 }
 
-.auxiliary-content {
+.auxiliary-content, .admin {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -199,7 +220,7 @@ a {
     min-height: calc(100vh - var(--navbar-height));
 }
 
-.auxiliary h1, .database-heading { 
+.auxiliary h1, .database-heading, .admin h1 { 
     margin: 0;
     font-family: var(--font-primary);
     color: var(--quarternary-color);
@@ -767,3 +788,18 @@ td, th {
     margin-top: 0;
 }
 
+/* ADMIN PAGE */
+
+#admin-save-button {
+    display: none;
+}
+
+.admin-select-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.admin-label {
+    margin-left: 5px;
+}

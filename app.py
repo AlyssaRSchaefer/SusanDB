@@ -45,6 +45,8 @@ if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
 def run_at_login():
     user_data = get_user_profile(session["access_token"])
     session["name"] = user_data.get("displayName", "Unknown User")
+    session["id"] = user_data.get("id")
+    session["color_scheme"] = get_color_scheme(session["id"])
 
 #################################################################################
 # App specific and routing logic
@@ -77,6 +79,10 @@ def index():
 def database():
     return render_template("database.html", delete_mode=False)
 
+@app.route('/admin')
+def admin():
+    return render_template("admin.html")
+
 @app.route('/edit_database')
 def edit_database():
     return render_template("auxiliary/edit_database.html", back_link="/database", heading="Edit Database")
@@ -100,6 +106,59 @@ def add_student():
 @app.route('/delete_student')
 def delete_student():
     return render_template('database.html', delete_mode=True)
+
+def get_color_scheme(id):
+    if id is None:
+        return "default"
+    
+    db = get_db()
+    query = "SELECT color_scheme FROM user_settings WHERE id = ?"
+    result = db.execute(query, (id,)).fetchone()
+
+    if result:
+        db.close()
+        return result[0]
+    
+    # If ID is not found, insert a new row with a default color scheme
+    insert_query = "INSERT INTO user_settings (id, color_scheme) VALUES (?, ?)"
+    db.execute(insert_query, (id, "default"))
+    db.commit()
+    db.close()
+    save_db()
+    
+    return "default"  # Return the default color scheme
+
+@app.route("/update_color_scheme", methods=["POST"])
+def update_color_scheme():
+    
+    if "id" not in session:
+        return jsonify({"error": "User not logged in"}), 403  # Unauthorized
+
+    user_id = session["id"]
+    color_scheme = request.json.get("colorScheme")
+    session["color_scheme"] = color_scheme
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if the user already has a color scheme saved
+    query = "SELECT 1 FROM user_settings WHERE id = ?"
+    result = cursor.execute(query, (user_id,)).fetchone()
+
+    if result:
+        # Update existing entry
+        update_query = "UPDATE user_settings SET color_scheme = ? WHERE id = ?"
+        cursor.execute(update_query, (color_scheme, user_id))
+    else:
+        # Insert new entry
+        insert_query = "INSERT INTO user_settings (id, color_scheme) VALUES (?, ?)"
+        cursor.execute(insert_query, (user_id, color_scheme))
+
+    db.commit()
+    db.close()
+    save_db()
+
+    return jsonify({"message": "Color scheme updated successfully", "colorScheme": color_scheme})
 
 def get_templates():
     templates_dict = {}
@@ -672,7 +731,7 @@ def add_student_to_db():
         db.close()
 
     save_db()
-    return render_template('auxiliary/edit_database_action', back_link="/database", heading="Student Added", mode="add_student_result")
+    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Student Added", mode="add_student_result")
 
 @app.route('/delete_students_from_db', methods=['POST'])
 def delete_students_from_db():
