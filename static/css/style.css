@@ -155,11 +155,13 @@ a {
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100%;
+    width: auto;
 }
 
 .navbar-name {
     font-family: var(--font-primary);
-    font-size: 2rem;
+    font-size: 2.5rem;
     padding: 0 10px 0 0;
 }
 
