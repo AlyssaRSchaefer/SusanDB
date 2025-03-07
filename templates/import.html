@@ -6,11 +6,16 @@
     <h1>IMPORT DATA PAGE</h1>
 
     <!-- Excel File Upload Section -->
-    <div class="upload-section">
-        <label for="upload-excel">Upload Excel File:</label>
+<div class="upload-section">
+    <h2>Upload Excel File for Student</h2>
+    <form id="upload-form">
+        <label for="upload-student-id">Student ID to add file to:</label>
+        <input type="text" id="upload-student-id" placeholder="Enter Student ID">
+        <label for="upload-excel">Select File:</label>
         <input type="file" id="upload-excel" accept=".xlsx">
-        <button onclick="uploadExcelFile()">Upload</button>
-    </div>
+        <button type="button" onclick="uploadExcelFile()">Upload</button>
+    </form>
+</div>
 
     <!-- Template Display Section -->
     <div class="template-section">
@@ -18,20 +23,99 @@
         <ul id="templates-list"></ul>
     </div>
 
-    <!-- Delete Student Section -->
-    <div class="delete-student-section">
-        <label for="student-id">Student ID to delete:</label>
-        <input type="text" id="student-id">
-        <button onclick="deleteStudent()">Delete Student</button>
-    </div>
-
     <!-- Associated Files Section -->
     <div class="files-section">
         <label for="view-files-id">Student ID to view files:</label>
-        <input type="text" id="view-files-id">
+        <input type="text" id="view-files-id" placeholder="Enter Student ID">
         <button onclick="listStudentFiles()">View Files</button>
         <div id="student-files-list"></div>
     </div>
 </div>
-<script src="static/js/database.js"></script>
+<script>
+    function uploadExcelFile() {
+    //console.log("hello")
+    const fileInput = document.getElementById("upload-excel");
+    const studentID = document.getElementById("upload-student-id").value.trim(); 
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Please select a file to upload.");
+        return;
+    }
+    if (!studentID) 
+    {
+        alert("Please enter a student ID.");
+        return;
+    }
+    if (isNaN(studentID)) 
+    {
+        alert("Invalid student ID. Please enter a number.");
+        return;
+    }
+    const formData = new FormData();
+    formData.append("excel_file", file);
+    formData.append("student_id", studentID);
+
+    console.log("Uploading file: ", file.name);
+    fetch('/upload-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response =>
+    { 
+        if (response.ok) 
+        {
+            alert("File uploaded successfully.");
+            studentIDInput.value = "";  // Clear student ID field
+            fileInput.value = "";       // Clear file input
+        } 
+        else 
+        {
+            return response.json().then(data => 
+            {
+                alert("Error: " + (data.error || "Something went wrong."));
+            });
+        }
+    })
+    .catch(error => 
+    {
+        console.error("Upload Error:", error);
+        alert("An error occurred while uploading the file.");
+    });
+}
+
+function listStudentFiles() {
+    const studentID = document.getElementById("view-files-id").value;
+
+    if (!studentID) {
+        alert("Please provide a student ID.");
+        return;
+    }
+
+    fetch('/get-student-files', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: studentID })
+    })
+    .then(response => response.json())
+    .then(files => {
+        const filesList = document.getElementById("student-files-list");
+        filesList.innerHTML = ''; //clear previous files
+
+        if (files.length > 0) {
+            files.forEach(file => {
+                const fileLink = document.createElement("a");
+                fileLink.href = `/download-file/${file.id}`;
+                fileLink.innerText = file.name;
+                filesList.appendChild(fileLink);
+            });
+        } else {
+            filesList.innerText = "No files found for this student.";
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
 {% endblock %}

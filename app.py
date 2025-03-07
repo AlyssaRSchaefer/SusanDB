@@ -15,7 +15,7 @@ import re
 from werkzeug.utils import secure_filename
 import shutil 
 import requests 
-
+import base64
 from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
@@ -29,13 +29,18 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
 CLIENT_ID = os.getenv("CLIENT_ID")
 AUTHORITY = os.getenv("AUTHORITY")
-SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
+SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder", "Sites.ReadWrite.All"]
 REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
 REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
+
+msal_app = msal.PublicClientApplication(
+    CLIENT_ID,
+    authority=AUTHORITY
+)
 
 # running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
 def run_at_login():
@@ -137,32 +142,98 @@ def database():
 def import_data():
     return render_template('import.html')
 
+ALLOWED_EXTENSIONS = {'xlsx'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+#local folder used for testing. The file should save temporarily to that folder 
+UPLOAD_FOLDER = r"C:\Uploads" 
 @app.route('/upload-excel', methods=['POST'])
 def upload_excel():
-    if 'excel_file' not in request.files:
-        return "No file part", 400
-    file = request.files['excel_file']
-    if file.filename == '':
-        return "No selected file", 400
+    try:
+        if 'excel_file' not in request.files:
+            return "No file part", 400
 
-    if file and allowed_file(file.filename):
-        #handle file saving and processing
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return "File uploaded", 200
-    return "Invalid file type", 400
+        file = request.files['excel_file']
+        if file.filename == '':
+            return "No selected file", 400
 
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            temp_file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(temp_file_path)
+            print(f"File saved temporarily at: {temp_file_path}")
 
-def upload_file_to_share_url(access_token, file_path, upload_url):
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-    }
-    with open(file_path, 'rb') as file_data:
-        response = requests.put(upload_url, headers=headers, data=file_data)
-    if response.status_code == 200:
-        return {"message": "File uploaded successfully"}
-    else:
-        return {"error": f"Failed to upload file: {response.status_code}"}
+            access_token = session.get("access_token")
+            if not access_token:
+                return "Unauthorized: No access token found", 401
+
+            shared_folder_url = os.getenv("SHARED_FOLDER_URL")
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            #the API accepts the full sharing URL as is
+            encoded_share_id = "u!" + base64.urlsafe_b64encode(shared_folder_url.encode()).decode().strip("=")
+            print(f"Encoded Share ID: {encoded_share_id}")
+
+            # Step 1: Resolve Shared Folder DriveItem
+            api_url = f"https://graph.microsoft.com/v1.0/shares/{encoded_share_id}/driveItem"
+            response = requests.get(api_url, headers=headers)
+
+            if response.status_code != 200:
+                print(f"Failed to get shared folder: {response.text}")
+                return "Failed to resolve shared folder", 500
+
+            folder_id = response.json()["id"]
+            print(f"Folder ID: {folder_id}")
+
+            # Step 2: Upload File to Shared Folder
+            upload_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{filename}:/content"
+            with open(temp_file_path, 'rb') as f:
+                file_content = f.read()
+
+                response = requests.put(upload_url, headers=headers, data=file_content)
+                print("OneDrive Upload Response:", response.status_code, response.text)
+
+            if response.status_code == 201:
+                print("File uploaded successfully")
+                return "File uploaded successfully", 200
+            else:
+                print("Error uploading to OneDrive:", response.text)
+                return "Error uploading file", 500
+
+            #resolve Shared Folder
+            api_url = f"https://graph.microsoft.com/v1.0/shares/{encoded_share_id}/driveItem"
+            response = requests.get(api_url, headers=headers)
+
+            if response.status_code != 200:
+                print(f"Failed to get shared folder: {response.text}")
+                return "Failed to resolve shared folder", 500
+
+            folder_id = response.json()["id"]
+            print(f"Folder ID: {folder_id}")
+
+            #upload file
+            upload_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{filename}:/content"
+            with open(temp_file_path, 'rb') as f:
+                file_content = f.read()
+
+            upload_response = requests.put(upload_url, headers=headers, data=file_content)
+            print("OneDrive Upload Response:", upload_response.status_code, upload_response.text)
+
+            if upload_response.status_code == 201:
+                print("File uploaded successfully")
+                return "File uploaded successfully", 200
+            else:
+                print("Error uploading to OneDrive:", upload_response.text)
+                return "Error uploading file", 500
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return f"Error uploading file: {str(e)}", 500
+
 
 @app.route('/delete-student', methods=['POST'])
 def delete_student():
@@ -172,7 +243,7 @@ def delete_student():
     if not student_id:
         return jsonify({"error": "Invalid student ID"}), 400
 
-    # Get the active database connection
+    # Gget the active database connection
     db = get_db()
     # Try opening the database
     try:
@@ -224,85 +295,6 @@ def delete_student():
         print("Error opening or modifying database:", e)
         return jsonify({"error": f"Database error: {e}"}), 500
 
-"""
-@app.route('/delete-student', methods=['POST']) 
-def delete_student():
-    data = request.get_json()
-    student_id = data.get('id')
-
-    if not student_id:
-        return jsonify({"error": "Invalid student ID"}), 400
-
-    # Download database file
-    file_content = download_file_from_share_url(session.get("access_token"), STUDENT_DB_URL)
-
-    if file_content is None:
-        return jsonify({"error": "Failed to download database (file content is None)"}), 500
-
-    print("File size:", len(file_content))  # Debug: check if data is actually downloaded
-
-    # Save and verify content
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".db") as temp_db:
-        temp_db.write(file_content)
-        temp_db_path = temp_db.name  
-
-    print("Database file saved to:", temp_db_path)
-
-    # Try opening the database
-    try:
-        conn = sqlite3.connect(temp_db_path)
-        cursor = conn.cursor()
-
-        # Verify database integrity
-        cursor.execute("PRAGMA integrity_check;")
-        check_result = cursor.fetchone()
-        print("PRAGMA integrity_check result:", check_result)
-
-        cursor.execute("SELECT COUNT(*) FROM students;")
-        student_count = cursor.fetchone()
-        print("Number of students in DB before deletion:", student_count)
-
-        # Ensure student ID is an integer
-        print(f"Received student ID: {student_id}, type: {type(student_id)}")
-        student_id = int(student_id)
-
-        # Check if student exists
-        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-        result = cursor.fetchone()
-        
-        if result is None:
-            print(f"Student ID {student_id} not found in database.")  # Debugging line
-            conn.close()
-            return jsonify({"error": "Student not found"}), 404
-        else:
-            print(f"Found student: {result}")  # Debugging line
-
-        # Delete student
-        cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
-        conn.commit()
-        print("Database file modified time:", os.path.getmtime(temp_db_path))
-        # Verify deletion
-        cursor.execute("SELECT * FROM students WHERE id = ?", (student_id,))
-        after_delete = cursor.fetchone()
-
-        if after_delete is None:
-            print(f"Student ID {student_id} successfully deleted.")
-        else:
-            print(f"ERROR: Student ID {student_id} still exists after deletion!")
-
-        # Check student count after deletion
-        cursor.execute("SELECT COUNT(*) FROM students;")
-        student_count_after = cursor.fetchone()
-        print("Number of students in DB after deletion:", student_count_after)
-
-        conn.close()
-        return jsonify({"message": "Student deleted successfully"}), 200
-
-    except Exception as e:
-        print("Error opening or modifying database:", e)
-        return jsonify({"error": f"Database error: {e}"}), 500
-"""
-
 
 @app.route('/get-student-files', methods=['POST'])
 def get_student_files():
@@ -311,7 +303,7 @@ def get_student_files():
     
     if student_id:
         # Fetch associated files from database or storage
-        files = [{"id": 1, "name": "File1.xlsx"}, {"id": 2, "name": "File2.pdf"}]  # Replace with actual file fetching
+        files = [{"id": 1, "name": "File1.xlsx"}, {"id": 2, "name": "File2.pdf"}]  #replace with actual file fetching
         return jsonify(files), 200
     return "Invalid student ID", 400
 

@@ -40,4 +40,68 @@
         </tr>
     </table>
 </div>
+<!-- Delete Student Section -->
+<div class="delete-student-section">
+    <button onclick="deleteStudent()">Delete Student</button>
+</div>
+<script>
+    function deleteStudent() 
+    {
+        //window.location.href = "/database"; //redirect to database.html
+        //let studentID = document.getElementById("student-id").value.trim(); //remove whitespace
+        let studentID = {{ student.id }} ; 
+    
+        studentID = Number(studentID);
+        if (isNaN(studentID)) 
+        {
+            alert("Invalid student ID. Please enter a valid number.");
+            return;
+        }
+        fetch('/delete-student', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: studentID })
+        })
+        .then(response => response.json())
+        .then(data => 
+        {
+            if (data.error) 
+            {
+                alert("Error: " + data.error);
+            } 
+            else 
+            {
+                alert(data.message);
+                //find the row in #database-body and remove it
+                window.location.href = "/database"; //redirect to the database 
+                const tableBody = document.getElementById("database-body");
+                if (tableBody) 
+                {
+                    Console.log("Found tableBody")
+                    const rows = tableBody.getElementsByTagName("tr");
+
+                    for (let i = 0; i < rows.length; i++) 
+                    {
+                        const cells = rows[i].getElementsByTagName("td");
+                        
+                        if (cells.length > 0 && cells[0].textContent.trim() === studentID) 
+                        {
+                            tableBody.removeChild(rows[i]);
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    Console.log("Did not find tableBody")
+                }
+            }
+        })
+        .catch(error => 
+        {
+            console.error('Error:', error);
+            //alert("An error occurred while deleting the student.");
+        });
+    }
+</script>
 {% endblock %}
