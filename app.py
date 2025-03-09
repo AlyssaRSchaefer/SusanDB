@@ -16,8 +16,8 @@ import os
 import json
 
 
-from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
-
+from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
+from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
@@ -37,6 +37,7 @@ FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
 
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
+global_mode = None # this stores if the user is in view mode or edit mode
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
@@ -54,18 +55,50 @@ def run_at_login():
 @app.route('/login')
 def login():
     with app.app_context():
-        # need access token to interact in any way with OneDrive API
         result = msal_app.acquire_token_interactive(SCOPES)
 
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
-            return render_template("database.html", delete_mode=False)
+
+            if check_lock_file():
+                return render_template("lockfile_exists.html")
+            else:
+                # Lock file doesn't exist, create it and enter edit mode
+                create_lock_file()
+                global global_mode
+                global_mode = 'edit'
+                return render_template("database.html")
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
+@app.before_request
+def set_mode():
+    # Your logic to determine the mode goes here
+    # For example, based on user session or some other condition
+    g.mode = "view"  # Or "edit"
+    # g.mode = session.get('mode', 'view') # Example using session.
+    
+@app.route('/enter_view_mode')
+def enter_view_mode():
+    global global_mode
+    global_mode = 'view'
+    return redirect(url_for('database'))
+
+@app.route('/unlock_database')
+def unlock_database():
+    global global_mode
+    global_mode = 'edit'
+    return redirect(url_for('database'))
+
+@app.route('/exit_app')
+def exit_app():
+    webview.windows[0].destroy() #closes the window
+    return "Exiting application" #this is just for debugging.
+
 @app.route('/logout')
 def logout():
+    delete_lock_file(global_mode)
     session.clear()
     return redirect(url_for('index'))
         

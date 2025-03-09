@@ -723,7 +723,6 @@ td, th {
     margin-top: 10px auto;
     text-align: center;
     transition: margin-top 0.5s ease, all 0.5s ease;
-    max-width: 800px;
   }
   /* After confirmation, slide it to the top of the body (just below the header) 
      and change layout to horizontal */
