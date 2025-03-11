@@ -3,6 +3,7 @@ from flask import session
 import os
 from dotenv import load_dotenv
 import base64
+import time
 
 load_dotenv()
 
@@ -11,6 +12,7 @@ load_dotenv()
 SHARED_FOLDER_URL = os.getenv("SHARED_FOLDER_URL")  # The shared OneDrive folder URL
 ONEDRIVE_API_BASE = "https://graph.microsoft.com/v1.0"
 LOCK_FILE_NAME = "index.lock"  # Name of the lock file
+LOCK_FILE_TIMEOUT = 20   # 15 minutes
 
 def get_onedrive_headers():
     """Returns headers for authenticated OneDrive API requests."""
@@ -40,72 +42,95 @@ def get_shared_folder_drive_item():
         return None
 
 def check_lock_file():
-    """Checks if the .lock file exists in the shared OneDrive folder."""
+    """Checks if the lock file exists and if it's expired (>15 mins old). Returns (timestamp, username) or False if not valid."""
     folder_info = get_shared_folder_drive_item()
     if not folder_info:
-        return False  # Unable to retrieve folder info
+        return False  
 
     drive_id = folder_info["driveId"]
     item_id = folder_info["itemId"]
 
-    url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children"
+    url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children/{LOCK_FILE_NAME}/content"
     response = requests.get(url, headers=get_onedrive_headers())
 
     if response.status_code == 200:
-        items = response.json().get("value", [])
-        return any(item["name"] == LOCK_FILE_NAME for item in items)  # Check if .lock file is in the folder
-    
-    return False  # Error fetching folder contents
+        content_lines = response.text.strip().split("\n")
+
+
+        lock_timestamp = int(content_lines[0])  # First line = timestamp
+        lock_user = content_lines[1]  # Second line = username
+
+        current_time = int(time.time())
+
+        if current_time - lock_timestamp > LOCK_FILE_TIMEOUT:
+            print(f"Lock expired (User: {lock_user}), deleting...")
+            delete_lock_file(None)
+            return False  # Lock expired and deleted
+
+        print(f"Lock is active (User: {lock_user}, Timestamp: {lock_timestamp})")
+        return lock_timestamp, lock_user  # Lock is still valid
+
+    return False  # Lock file does not exist
+
 
 def create_lock_file():
-    """Creates a .lock file inside the shared OneDrive folder."""
+    """Creates a .lock file with a timestamp inside the shared OneDrive folder."""
     folder_info = get_shared_folder_drive_item()
     if not folder_info:
         print("Error: Could not retrieve shared folder info.")
-        return False  # Unable to retrieve folder info
+        return False  
 
     # NOTE: this system is needed to ensure it works for the user who owns the folder and the users who its shared with
     drive_id = folder_info["driveId"]
     item_id = folder_info["itemId"]
-
-
     url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children"
 
-    file_metadata = {
-        "name": LOCK_FILE_NAME,
-        "file": {},  # This tells OneDrive it's a file, even though it's empty
-        "@microsoft.graph.conflictBehavior": "replace"  # Replace existing lock file if it exists
-    }
+    timestamp = int(time.time())  # Current UNIX timestamp
+    user_name = session.get("name", "Unknown User")  # Retrieve user name from session
 
-    response = requests.post(url, headers=get_onedrive_headers(), json=file_metadata)
+    file_content = f"{timestamp}\n{user_name}"  # Store timestamp on the first line, username on the second
 
-    return response.status_code in [200, 201]  # Successfully created
+    response = requests.put(
+        f"{url}/{LOCK_FILE_NAME}/content",
+        headers=get_onedrive_headers(),
+        data=file_content
+    )
 
-def delete_lock_file(mode):
-    """Deletes the .lock file from OneDrive only if no one is actively editing."""
-    if mode == "view":
-        print("in view mode, won't delete lock file")
-        return False  # Don't delete if current user only has view permissions
+    return response.status_code in [200, 201]
 
+def update_lock_timestamp():
+    """Updates the timestamp while keeping the same username inside the lock file."""
     folder_info = get_shared_folder_drive_item()
     if not folder_info:
-        return False  # Unable to retrieve folder info
+        return  
 
     drive_id = folder_info["driveId"]
     item_id = folder_info["itemId"]
 
-    url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children"
-    response = requests.get(url, headers=get_onedrive_headers())
+    url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children/{LOCK_FILE_NAME}/content"
 
-    if response.status_code == 200:
-        items = response.json().get("value", [])
-        lock_file = next((item for item in items if item["name"] == LOCK_FILE_NAME), None)
+    existing_user_name = session.get("name", "Unknown User")  # Default to session user
 
-        if lock_file:
-            print("found lock file, trying to delete!")
-            lock_file_id = lock_file["id"]
-            delete_url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{lock_file_id}"
-            delete_response = requests.delete(delete_url, headers=get_onedrive_headers())
-            return delete_response.status_code in [200, 204]  # Successfully deleted
+    new_timestamp = str(int(time.time()))
 
-    return False  # Lock file not found or error
+    new_file_content = f"{new_timestamp}\n{existing_user_name}"  # Keep username, update timestamp
+
+    requests.put(url, headers=get_onedrive_headers(), data=new_file_content)
+
+def delete_lock_file(mode):
+    """Deletes the .lock file from OneDrive."""
+    if mode == "view":
+        print("in view mode, won't delete lock file")
+        return False  # Don't delete if current user only has view permissions
+    
+    folder_info = get_shared_folder_drive_item()
+    if not folder_info:
+        return False  
+
+    drive_id = folder_info["driveId"]
+    item_id = folder_info["itemId"]
+
+    url = f"{ONEDRIVE_API_BASE}/drives/{drive_id}/items/{item_id}/children/{LOCK_FILE_NAME}"
+    response = requests.delete(url, headers=get_onedrive_headers())
+
+    return response.status_code in [200, 204]

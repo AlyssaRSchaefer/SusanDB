@@ -92,9 +92,8 @@
         <img src="static/icons/icon-lock.png" alt="Lock Icon" class="icon right-icon">
     </div>
 
-
     <div class="login-box">
-        <p>Our records indicate that someone is currently using the database. <br> Concurrent users could lead to changes not being saved or data getting deleted.</p>
+        <p>Our records indicate that <b>{{ last_user }}</b> is currently using the database, and last made a change at <b>{{ last_update_time }}</b>.<br> Concurrent users could lead to changes not being saved or data getting deleted.</p>
         <br>
         <button class="primary-button text" id="viewModeButton" style="padding: 10px; height: auto;">Enter View Mode</button>
         <button class="primary-button text" id="unlockButton" style="padding: 10px; height: auto;">Unlock Database</button>

@@ -14,10 +14,14 @@ import re
 from fpdf import FPDF
 import os
 import json
+from datetime import datetime
+import time
+import requests
+import urllib.parse
 
 
 from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
-from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file
+from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp, LOCK_FILE_TIMEOUT
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
@@ -37,7 +41,10 @@ FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
 
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
-global_mode = None # this stores if the user is in view mode or edit mode
+global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
+global_last_activity = time.time()
+global_logout_warning_shown = False  # Flag to prevent multiple warnings
+LOCK_FILE_TIMEOUT_WARNING = 10 # 10 minutes
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
@@ -51,6 +58,97 @@ def run_at_login():
 # App specific and routing logic
 #################################################################################
 
+@app.before_request
+def update_lock_timestamp_api():
+    global global_last_activity, global_logout_warning_shown
+    global_last_activity = time.time()
+    global_logout_warning_shown = False
+    if global_mode == 'edit':
+        update_lock_timestamp()
+
+def reset_activity():
+    global global_last_activity, global_logout_warning_shown
+    global_last_activity = time.time()
+    global_logout_warning_shown = False
+
+def handle_url(url):
+    parsed_url = urllib.parse.urlparse(url)
+    if parsed_url.scheme == 'custom':
+        if parsed_url.netloc == 'reset_activity':
+            reset_activity()
+
+def monitor_inactivity():
+    global global_last_activity, global_logout_warning_shown
+
+    while True:
+        time.sleep(10)
+        elapsed = time.time() - global_last_activity
+
+        if elapsed >= LOCK_FILE_TIMEOUT_WARNING and not global_logout_warning_shown and global_mode == 'edit':
+            remaining_time = LOCK_FILE_TIMEOUT - elapsed
+            js_code = f"""
+            function showCountdownDialog(remainingTime) {{
+                // Create overlay
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
+                overlay.style.zIndex = '999';
+                document.body.appendChild(overlay);
+
+                // Create modal
+                let countdown = remainingTime;
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '50%';
+                modal.style.left = '50%';
+                modal.style.transform = 'translate(-50%, -50%)';
+                modal.style.backgroundColor = 'white';
+                modal.style.padding = '20px';
+                modal.style.border = '1px solid black';
+                modal.style.zIndex = '1000';
+                modal.style.textAlign = 'center'; // Center text
+                modal.innerHTML = `<p>You will be logged out in <span id="countdown"></span> seconds due to inactivity. Do you want to continue?</p>
+                                   <button id="continueButton">Continue</button>`;
+                document.body.appendChild(modal);
+
+                const countdownElement = document.getElementById('countdown');
+                const continueButton = document.getElementById('continueButton');
+
+                const interval = setInterval(() => {{
+                    countdown--;
+                    countdownElement.textContent = countdown;
+                    if (countdown <= 0) {{
+                        clearInterval(interval);
+                        modal.remove();
+                        overlay.remove();
+                    }}
+                }}, 1000);
+
+                continueButton.addEventListener('click', () => {{
+                    clearInterval(interval);
+                    modal.remove();
+                    overlay.remove();
+                    window.location.href = 'custom://reset_activity';
+                }});
+            }}
+            showCountdownDialog({int(remaining_time)});
+            """
+            webview.windows[0].evaluate_js(js_code)
+            global_logout_warning_shown = True
+
+        if elapsed >= LOCK_FILE_TIMEOUT and global_mode == 'edit':
+            try:
+                print("trying to log user out")
+                requests.get("http://127.0.0.1:5000/logout_from_inactivity")
+            except requests.exceptions.RequestException as e:
+                print(f"Error during logout request: {e}")
+            webview.windows[0].load_url("http://127.0.0.1:5000/")
+            break
+
 # handles initial login logic
 @app.route('/login')
 def login():
@@ -61,8 +159,13 @@ def login():
             session["access_token"] = result.get("access_token")
             run_at_login()
 
-            if check_lock_file():
-                return render_template("lockfile_exists.html")
+            is_lock_file = check_lock_file()
+
+            if is_lock_file:
+                timestamp = is_lock_file[0]
+                last_user = is_lock_file[1]
+                dt = datetime.fromtimestamp(int(timestamp))
+                return render_template("lockfile_exists.html", last_user=last_user, last_update_time=dt.strftime("%H:%M on %m/%d"))
             else:
                 # Lock file doesn't exist, create it and enter edit mode
                 create_lock_file()
@@ -72,13 +175,6 @@ def login():
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
-@app.before_request
-def set_mode():
-    # Your logic to determine the mode goes here
-    # For example, based on user session or some other condition
-    g.mode = "view"  # Or "edit"
-    # g.mode = session.get('mode', 'view') # Example using session.
-    
 @app.route('/enter_view_mode')
 def enter_view_mode():
     global global_mode
@@ -98,9 +194,25 @@ def exit_app():
 
 @app.route('/logout')
 def logout():
+    global global_mode
     delete_lock_file(global_mode)
     session.clear()
+    global_mode=None
     return redirect(url_for('index'))
+
+@app.route('/logout_from_inactivity')
+def logout_from_inactivity():
+    global global_mode
+    try:
+        global_mode=None
+        print(session["access_token"])
+        delete_lock_file(global_mode)
+        print(session["access_token"])
+        time.sleep(3)
+        session.clear()
+        return "Logged out", 200
+    except:
+        return "Error", 500
         
 @app.route('/')
 def index():
@@ -785,6 +897,11 @@ if __name__ == '__main__':
     flask_thread = threading.Thread(target=start_flask)
     flask_thread.daemon = True
     flask_thread.start()
+
+    # Start the inactivity monitor thread
+    inactivity_thread = threading.Thread(target=monitor_inactivity)
+    inactivity_thread.daemon = True
+    inactivity_thread.start()
 
     # Create a PyWebView window to load the Flask app
     webview.create_window('SusanDB', 'http://127.0.0.1:5000')
