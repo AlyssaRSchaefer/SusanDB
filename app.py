@@ -128,6 +128,11 @@ def get_color_scheme(id):
     
     return "default"  # Return the default color scheme
 
+@app.route('/get_color_scheme_session')
+def get_color_scheme_session():
+    color_scheme = session.get('color_scheme', 'default')
+    return jsonify({'color_scheme': color_scheme})
+
 @app.route("/update_color_scheme", methods=["POST"])
 def update_color_scheme():
     
@@ -468,12 +473,9 @@ def layout():
 
 @app.route('/details')
 def details():
-    selected_students = session.get('selected_students', [])
-    students = get_students_by_ids(selected_students, [])
     return render_template('auxiliary/details.html',
-                           heading=students[0]["name"],  # Assuming only one student
-                           back_link="/database",
-                           student=students)
+                           heading="test",  # Assuming only one student
+                           back_link="/database")
 
 @app.route('/store-selected-students', methods=['POST'])
 def store_selected_students():
@@ -783,6 +785,21 @@ def update_database_cell():
     save_db()
     return jsonify({"message": "Student data updated successfully."}), 200
 
+@app.route('/get_student', methods=['POST'])
+def get_student():
+    data = request.get_json()
+    student_id = data.get('id')
+    if not student_id:
+        return jsonify({"error": "No student ID provided"}), 400
+    try:
+        student = get_student_by_id(student_id)
+        if student:
+            return jsonify(student)
+        else:
+            return jsonify({"error": "Student not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def get_students_by_ids(ids, selected_fields):
     db = get_db()
     # Fetch student data for selected IDs and fields
@@ -795,6 +812,20 @@ def get_students_by_ids(ids, selected_fields):
     cursor=db.execute(query, ids)
     student_data = cursor.fetchall()
     return student_data
+
+def get_student_by_id(id):
+    db = get_db()
+    query = "SELECT * FROM students WHERE id = ?"
+    cursor = db.execute(query, (id,))
+    student = cursor.fetchone()
+    db.close()
+    if student:
+        # Convert row to dictionary using cursor description
+        columns = [col[0] for col in cursor.description]
+        student_dict = dict(zip(columns, student))
+        student_dict.pop('id', None)
+        return student_dict
+    return None
 
 # MSAL app setup
 def _build_msal_app():

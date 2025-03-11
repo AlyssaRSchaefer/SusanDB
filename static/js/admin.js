@@ -23,3 +23,17 @@ function saveColorScheme() {
     .then(data => console.log(data))
     .catch(error => console.error("Error:", error));
 }
+
+function fetchColorScheme() {
+    fetch("/get_color_scheme_session")
+        .then(response => response.json())
+        .then(data => {
+            // Set the selected value of the color scheme dropdown
+            colorSchemeSelect.value = data.color_scheme;
+        })
+        .catch(error => console.error("Error:", error));
+}
+
+window.onload = () => {
+    fetchColorScheme();
+};

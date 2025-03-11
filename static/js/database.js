@@ -155,24 +155,6 @@ function sortTableByField(field){
     fetchData(sort, filter, search);
 }
 
-/* Details page uses this to store selected student id in session*/
-function storeSelectedStudents(){
-    return fetch('/store-selected-students', {  // Added "return" here
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ selectedStudents: selectedStudents })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json(); // Ensure response is processed
-    })
-    .catch(error => console.error('Error:', error));
-}
-
 function openGenerateReportPage() {
     if (selectedStudents.length === 0) {
         alert("Please select at least one student to generate a report.");
@@ -192,11 +174,8 @@ function openDetailsPage(){
         return;
     }
     
-    storeSelectedStudents()
-    .then(() => {
-        window.location.href = '/details'; 
-    })
-    .catch(error => console.error('Error:', error));
+    const studentId = encodeURIComponent(selectedStudents[0]);
+    window.location.href = `/details?id=${studentId}`;
 }
 
 function deleteStudents() {

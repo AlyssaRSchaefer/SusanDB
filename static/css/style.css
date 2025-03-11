@@ -46,7 +46,7 @@
     --quarternary-color: #747474; /* dark gray */    
 }
 
-.mocha {
+.strawberry {
     --primary-color: #D9B2A9;
     --primary-color-highlight: #BD9F8B;
     --secondary-color: #F5D6CA;
@@ -329,6 +329,8 @@ a {
     white-space: nowrap;
     scrollbar-color: var(--primary-color) var(--secondary-color);
     scrollbar-width: thin;
+    overflow-y: auto;
+    max-height: 60vh;
 }
 
 .database-table {
@@ -341,6 +343,7 @@ a {
 .database-table thead {
     position: sticky;
     top: 0;
+    z-index: 20;
 }
 
 .database-table thead tr {
@@ -476,6 +479,92 @@ td, th {
     outline: none;
     font: var(--font-secondary);
     color: var(--quarternary-color);
+}
+
+/* DETAILS PAGE */
+.details {
+    display: flex;
+    gap: 20px;
+    padding-left: 40px;
+    padding-right: 40px; /* Adds space inside the container */
+    width: 100%; /* Ensure the container stretches to full width */
+    box-sizing: border-box;
+}
+
+.details-fields, .details-files {
+    flex: 1;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-color: var(--primary-color) var(--secondary-color);
+    scrollbar-width: thin;
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.details-table {
+    border-collapse: separate; 
+    border-spacing: 0 2px;
+    width: 100%;
+}
+
+.details-table tbody tr {
+    background-color: var(--tertiary-color);
+    margin-bottom: 2px;
+    color: var(--quarternary-color)
+}
+
+.details-cell-input {
+    border: none;
+    outline: none;
+    font: var(--font-secondary);
+    color: var(--quarternary-color);
+    background-color: var(--secondary-color);
+}
+
+.details-files-header {
+    color: var(--quarternary-color);
+    background-color: var(--tertiary-color);
+    text-align: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 5px;
+}
+
+.details-file-icons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+    gap: 5px;
+    box-sizing: border-box;
+}
+
+.details-file {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+}
+
+.details-file-icon {
+    background-color: var(--tertiary-color);
+    width: 100%;
+    height: auto;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2px;
+}
+
+.details-file-icon img {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.details-file-name {
+    color: var(--quarternary-color);
+    background-color: var(--tertiary-color);
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 3px;
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
