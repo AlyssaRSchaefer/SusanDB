@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 </head>
-<body>
+<body class="{{session['color_scheme']}}">
   <nav class="navbar">
     <div class="navbar-elements">
       <div class="navbar-heading">
@@ -20,6 +20,7 @@
         <li><a href="{{ url_for('database') }}">DATABASE</a></li>
         <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
         <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
+        <li><a href="{{ url_for('admin') }}">ADMIN</a></li>
         <li><a href="#logout">LOGOUT</a></li>
       </ul>
     </div>

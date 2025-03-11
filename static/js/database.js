@@ -155,24 +155,6 @@ function sortTableByField(field){
     fetchData(sort, filter, search);
 }
 
-/* Details page uses this to store selected student id in session*/
-function storeSelectedStudents(){
-    return fetch('/store-selected-students', {  // Added "return" here
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ selectedStudents: selectedStudents })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json(); // Ensure response is processed
-    })
-    .catch(error => console.error('Error:', error));
-}
-
 function openGenerateReportPage() {
     if (selectedStudents.length === 0) {
         alert("Please select at least one student to generate a report.");
@@ -192,11 +174,8 @@ function openDetailsPage(){
         return;
     }
     
-    storeSelectedStudents()
-    .then(() => {
-        window.location.href = '/details'; 
-    })
-    .catch(error => console.error('Error:', error));
+    const studentId = encodeURIComponent(selectedStudents[0]);
+    window.location.href = `/details?id=${studentId}`;
 }
 
 function deleteStudents() {
@@ -243,7 +222,7 @@ function updateCellData(id, field, newValue) {
 
 /* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
-    const tableHeader = document.querySelector('table thead');
+    const tableHeader = document.getElementById("database-head");
 
     fetch('/get_fields')
     .then(response => response.json())
@@ -256,12 +235,12 @@ function fetchColumns() {
         tableHeader.appendChild(thCheckbox);
 
         data.forEach(field => {
-            const td = document.createElement("td");
-            td.id = field;
-            td.classList.add("database-column-name");
-            td.onclick = () => sortTableByField(field);
-            td.innerHTML = field.replace("_", " ").toUpperCase() + '<img id="database-icon-' + field + '" class="database-sort-icon" src="static/icons/icon-up.png" alt="Sort icon"></img>';
-            tableHeader.appendChild(td);
+            const th = document.createElement("th");
+            th.id = field;
+            th.classList.add("database-column-name");
+            th.onclick = () => sortTableByField(field);
+            th.innerHTML = field.replace("_", " ").toUpperCase() + '<img id="database-icon-' + field + '" class="database-sort-icon" src="static/icons/icon-up.png" alt="Sort icon"></img>';
+            tableHeader.appendChild(th);
             columns.push(field);
         })
         fetchData();
