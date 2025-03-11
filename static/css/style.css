@@ -281,17 +281,10 @@ a {
     color: var(--primary-color);
 }
 
-.database-sticky {
-    position: sticky;
-    top: 0;
-    background-color: var(--secondary-color);
-    z-index: 25;
-}
-
 .database-controls {
     display: flex;
     justify-content: space-between;
-    padding: 20px 0 25px 0;
+    margin: 20px 0 25px 0;
 }
 
 .database-controls-left{
@@ -501,6 +494,12 @@ td, th {
     max-height: 60vh;
 }
 
+#details-upload-button {
+    position: absolute;
+    top: 5px;
+    left: 155px;
+}
+
 .details-table {
     border-collapse: separate; 
     border-spacing: 0 2px;
@@ -511,6 +510,10 @@ td, th {
     background-color: var(--tertiary-color);
     margin-bottom: 2px;
     color: var(--quarternary-color)
+}
+
+.details-table tbody tr:hover, .details-file-icon:hover {
+    background-color: var(--secondary-color);
 }
 
 .details-cell-input {
