@@ -12,7 +12,6 @@ load_dotenv()
 SHARED_FOLDER_URL = os.getenv("SHARED_FOLDER_URL")  # The shared OneDrive folder URL
 ONEDRIVE_API_BASE = "https://graph.microsoft.com/v1.0"
 LOCK_FILE_NAME = "index.lock"  # Name of the lock file
-LOCK_FILE_TIMEOUT = 20   # 15 minutes
 
 def get_onedrive_headers():
     """Returns headers for authenticated OneDrive API requests."""
@@ -59,13 +58,6 @@ def check_lock_file():
 
         lock_timestamp = int(content_lines[0])  # First line = timestamp
         lock_user = content_lines[1]  # Second line = username
-
-        current_time = int(time.time())
-
-        if current_time - lock_timestamp > LOCK_FILE_TIMEOUT:
-            print(f"Lock expired (User: {lock_user}), deleting...")
-            delete_lock_file(None)
-            return False  # Lock expired and deleted
 
         print(f"Lock is active (User: {lock_user}, Timestamp: {lock_timestamp})")
         return lock_timestamp, lock_user  # Lock is still valid

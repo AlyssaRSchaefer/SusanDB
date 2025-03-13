@@ -21,7 +21,7 @@ import urllib.parse
 
 
 from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
-from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp, LOCK_FILE_TIMEOUT
+from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
@@ -42,17 +42,17 @@ FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
 global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
-global_last_activity = time.time()
-global_logout_warning_shown = False  # Flag to prevent multiple warnings
-LOCK_FILE_TIMEOUT_WARNING = 10 # 10 minutes
+global_last_update_time = 0
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
 
 # running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
 def run_at_login():
+    global global_last_update_time
     user_data = get_user_profile(session["access_token"])
     session["name"] = user_data.get("displayName", "Unknown User")
+    global_last_update_time = time.time()
 
 #################################################################################
 # App specific and routing logic
@@ -60,94 +60,13 @@ def run_at_login():
 
 @app.before_request
 def update_lock_timestamp_api():
-    global global_last_activity, global_logout_warning_shown
-    global_last_activity = time.time()
-    global_logout_warning_shown = False
+    global global_last_update_time
+
     if global_mode == 'edit':
-        update_lock_timestamp()
-
-def reset_activity():
-    global global_last_activity, global_logout_warning_shown
-    global_last_activity = time.time()
-    global_logout_warning_shown = False
-
-def handle_url(url):
-    parsed_url = urllib.parse.urlparse(url)
-    if parsed_url.scheme == 'custom':
-        if parsed_url.netloc == 'reset_activity':
-            reset_activity()
-
-def monitor_inactivity():
-    global global_last_activity, global_logout_warning_shown
-
-    while True:
-        time.sleep(10)
-        elapsed = time.time() - global_last_activity
-
-        if elapsed >= LOCK_FILE_TIMEOUT_WARNING and not global_logout_warning_shown and global_mode == 'edit':
-            remaining_time = LOCK_FILE_TIMEOUT - elapsed
-            js_code = f"""
-            function showCountdownDialog(remainingTime) {{
-                // Create overlay
-                const overlay = document.createElement('div');
-                overlay.style.position = 'fixed';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
-                overlay.style.zIndex = '999';
-                document.body.appendChild(overlay);
-
-                // Create modal
-                let countdown = remainingTime;
-                const modal = document.createElement('div');
-                modal.style.position = 'fixed';
-                modal.style.top = '50%';
-                modal.style.left = '50%';
-                modal.style.transform = 'translate(-50%, -50%)';
-                modal.style.backgroundColor = 'white';
-                modal.style.padding = '20px';
-                modal.style.border = '1px solid black';
-                modal.style.zIndex = '1000';
-                modal.style.textAlign = 'center'; // Center text
-                modal.innerHTML = `<p>You will be logged out in <span id="countdown"></span> seconds due to inactivity. Do you want to continue?</p>
-                                   <button id="continueButton">Continue</button>`;
-                document.body.appendChild(modal);
-
-                const countdownElement = document.getElementById('countdown');
-                const continueButton = document.getElementById('continueButton');
-
-                const interval = setInterval(() => {{
-                    countdown--;
-                    countdownElement.textContent = countdown;
-                    if (countdown <= 0) {{
-                        clearInterval(interval);
-                        modal.remove();
-                        overlay.remove();
-                    }}
-                }}, 1000);
-
-                continueButton.addEventListener('click', () => {{
-                    clearInterval(interval);
-                    modal.remove();
-                    overlay.remove();
-                    window.location.href = 'custom://reset_activity';
-                }});
-            }}
-            showCountdownDialog({int(remaining_time)});
-            """
-            webview.windows[0].evaluate_js(js_code)
-            global_logout_warning_shown = True
-
-        if elapsed >= LOCK_FILE_TIMEOUT and global_mode == 'edit':
-            try:
-                print("trying to log user out")
-                requests.get("http://127.0.0.1:5000/logout_from_inactivity")
-            except requests.exceptions.RequestException as e:
-                print(f"Error during logout request: {e}")
-            webview.windows[0].load_url("http://127.0.0.1:5000/")
-            break
+        current_time = time.time()
+        if current_time - global_last_update_time >= 60:
+            update_lock_timestamp()
+            global_last_update_time = current_time
 
 # handles initial login logic
 @app.route('/login')
@@ -899,9 +818,9 @@ if __name__ == '__main__':
     flask_thread.start()
 
     # Start the inactivity monitor thread
-    inactivity_thread = threading.Thread(target=monitor_inactivity)
-    inactivity_thread.daemon = True
-    inactivity_thread.start()
+    #inactivity_thread = threading.Thread(target=monitor_inactivity)
+    #inactivity_thread.daemon = True
+    #inactivity_thread.start()
 
     # Create a PyWebView window to load the Flask app
     webview.create_window('SusanDB', 'http://127.0.0.1:5000')
