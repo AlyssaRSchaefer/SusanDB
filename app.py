@@ -1,4 +1,4 @@
-from flask import Flask, g, session, render_template, jsonify, request
+from flask import Flask, g, session, render_template, jsonify, request, Response
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -102,6 +102,7 @@ def login():
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
+            webview.windows[0].maximize()
 
             is_lock_file = check_lock_file()
 
@@ -121,7 +122,24 @@ def login():
 @app.route('/exit_app')
 def exit_app():
     webview.windows[0].destroy() #closes the window
-    return "Exiting application" #this is just for debugging.
+    return Response(status=204)  # No Content
+
+@app.route('/minimize')
+def minimize():
+    webview.windows[0].minimize()
+    return Response(status=204)  # No Content
+
+# Example shrink function
+@app.route('/shrink')
+def shrink():
+    print(webview.windows[0].height)
+    print(webview.windows[0].width)
+    if webview.windows[0].height==2000 and webview.windows[0].width==2800:
+        print("trying to max")
+        webview.windows[0].toggle_fullscreen()
+    else:
+        webview.windows[0].resize(2800, 2000)
+    return Response(status=204)  # No Content
 
 # logout AND close app
 @app.route('/logout')
@@ -900,6 +918,14 @@ def _build_msal_app():
 
 msal_app = _build_msal_app()
 
+def on_closing(window):
+    if global_mode=='edit':
+        window.evaluate_js("alert('Please logout first.');")
+        #THEY MUST EXIT THROUGH A LOGOUT
+        return False
+    else:
+        return True
+
 # Main entry point
 if __name__ == '__main__':
     # Start Flask server in a separate thread
@@ -908,5 +934,6 @@ if __name__ == '__main__':
     flask_thread.start()
 
     # Create a PyWebView window to load the Flask app
-    webview.create_window('SusanDB', 'http://127.0.0.1:5000')
+    window = webview.create_window('SusanDB', 'http://127.0.0.1:5000', frameless=True)
+    window.events.closing += on_closing
     webview.start()

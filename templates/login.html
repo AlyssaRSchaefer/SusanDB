@@ -92,17 +92,9 @@
       font-size: 16px;
     }
   </style>
-  
-
-  <script>
-    function showLoading() {
-      document.getElementById("loginButton").style.display = "none";
-      document.getElementById("loadingSpinner").style.display = "block";
-      document.getElementById("access-denied-box").style.display = "none";
-    }
-  </script>
 </head>
-<body>
+<body class="pywebview-drag-region">
+  <div id="closeButton" style="position: absolute; top: 10px; right: 20px; cursor: pointer; font-size: x-large; font-weight: bold; color: white; opacity: .8;">&#10006;</div>
 
   <div class="container">
     <h1>SusanDB</h1>
@@ -124,5 +116,16 @@
     <img src="static/icons/icon-db.png" alt="Database Icon" class="icon right-icon">
   </div>
 
+  <script>
+    function showLoading() {
+      document.getElementById("loginButton").style.display = "none";
+      document.getElementById("loadingSpinner").style.display = "block";
+      document.getElementById("access-denied-box").style.display = "none";
+    }
+
+    document.getElementById('closeButton').addEventListener('click', function() {
+        fetch('/exit_app'); // Call the Flask exit_app route
+    });
+  </script>
 </body>
 </html>

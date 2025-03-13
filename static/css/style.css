@@ -262,6 +262,31 @@ a {
     align-items: center;
   }
 
+  .title-bar-buttons {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    background-color: white;
+    justify-content: right;
+}
+
+.title-bar-buttons li {
+    margin-right: 20px;
+}
+
+.title-bar-button {
+    text-decoration: none;
+    font-size: 20px;
+    color: var(--quarternary-color);
+}
+
+.title-bar-button:hover {
+    cursor: pointer;
+    color: var(--primprimary-color-highlight);
+}
+
 /* MULTIPLE PAGES */
 .database, .import, .templates, .admin, .auxiliary-content, .database-auxiliary-content {
     margin: 0 var(--horizontal-margin);
