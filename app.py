@@ -52,6 +52,8 @@ def run_at_login():
     global global_last_update_time
     user_data = get_user_profile(session["access_token"])
     session["name"] = user_data.get("displayName", "Unknown User")
+    session["id"] = user_data.get("id")
+    session["color_scheme"] = get_color_scheme(session["id"])
     global_last_update_time = time.time()
 
 #################################################################################
@@ -141,6 +143,10 @@ def index():
 def database():
     return render_template("database.html", delete_mode=False)
 
+@app.route('/admin')
+def admin():
+    return render_template("admin.html")
+
 @app.route('/edit_database')
 def edit_database():
     return render_template("auxiliary/edit_database.html", back_link="/database", heading="Edit Database")
@@ -164,6 +170,64 @@ def add_student():
 @app.route('/delete_student')
 def delete_student():
     return render_template('database.html', delete_mode=True)
+
+def get_color_scheme(id):
+    if id is None:
+        return "default"
+    
+    db = get_db()
+    query = "SELECT color_scheme FROM user_settings WHERE id = ?"
+    result = db.execute(query, (id,)).fetchone()
+
+    if result:
+        db.close()
+        return result[0]
+    
+    # If ID is not found, insert a new row with a default color scheme
+    insert_query = "INSERT INTO user_settings (id, color_scheme) VALUES (?, ?)"
+    db.execute(insert_query, (id, "default"))
+    db.commit()
+    db.close()
+    save_db()
+    
+    return "default"  # Return the default color scheme
+
+@app.route('/get_color_scheme_session')
+def get_color_scheme_session():
+    color_scheme = session.get('color_scheme', 'default')
+    return jsonify({'color_scheme': color_scheme})
+
+@app.route("/update_color_scheme", methods=["POST"])
+def update_color_scheme():
+    
+    if "id" not in session:
+        return jsonify({"error": "User not logged in"}), 403  # Unauthorized
+
+    user_id = session["id"]
+    color_scheme = request.json.get("colorScheme")
+    session["color_scheme"] = color_scheme
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if the user already has a color scheme saved
+    query = "SELECT 1 FROM user_settings WHERE id = ?"
+    result = cursor.execute(query, (user_id,)).fetchone()
+
+    if result:
+        # Update existing entry
+        update_query = "UPDATE user_settings SET color_scheme = ? WHERE id = ?"
+        cursor.execute(update_query, (color_scheme, user_id))
+    else:
+        # Insert new entry
+        insert_query = "INSERT INTO user_settings (id, color_scheme) VALUES (?, ?)"
+        cursor.execute(insert_query, (user_id, color_scheme))
+
+    db.commit()
+    db.close()
+    save_db()
+
+    return jsonify({"message": "Color scheme updated successfully", "colorScheme": color_scheme})
 
 def get_templates():
     templates_dict = {}
@@ -473,12 +537,9 @@ def layout():
 
 @app.route('/details')
 def details():
-    selected_students = session.get('selected_students', [])
-    students = get_students_by_ids(selected_students, [])
     return render_template('auxiliary/details.html',
-                           heading=students[0]["name"],  # Assuming only one student
-                           back_link="/database",
-                           student=students)
+                           heading="test",  # Assuming only one student
+                           back_link="/database")
 
 @app.route('/store-selected-students', methods=['POST'])
 def store_selected_students():
@@ -736,7 +797,7 @@ def add_student_to_db():
         db.close()
 
     save_db()
-    return render_template('auxiliary/edit_database_action', back_link="/database", heading="Student Added", mode="add_student_result")
+    return render_template('auxiliary/edit_database_action.html', back_link="/database", heading="Student Added", mode="add_student_result")
 
 @app.route('/delete_students_from_db', methods=['POST'])
 def delete_students_from_db():
@@ -788,6 +849,21 @@ def update_database_cell():
     save_db()
     return jsonify({"message": "Student data updated successfully."}), 200
 
+@app.route('/get_student', methods=['POST'])
+def get_student():
+    data = request.get_json()
+    student_id = data.get('id')
+    if not student_id:
+        return jsonify({"error": "No student ID provided"}), 400
+    try:
+        student = get_student_by_id(student_id)
+        if student:
+            return jsonify(student)
+        else:
+            return jsonify({"error": "Student not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def get_students_by_ids(ids, selected_fields):
     db = get_db()
     # Fetch student data for selected IDs and fields
@@ -800,6 +876,20 @@ def get_students_by_ids(ids, selected_fields):
     cursor=db.execute(query, ids)
     student_data = cursor.fetchall()
     return student_data
+
+def get_student_by_id(id):
+    db = get_db()
+    query = "SELECT * FROM students WHERE id = ?"
+    cursor = db.execute(query, (id,))
+    student = cursor.fetchone()
+    db.close()
+    if student:
+        # Convert row to dictionary using cursor description
+        columns = [col[0] for col in cursor.description]
+        student_dict = dict(zip(columns, student))
+        student_dict.pop('id', None)
+        return student_dict
+    return None
 
 # MSAL app setup
 def _build_msal_app():
@@ -823,5 +913,5 @@ if __name__ == '__main__':
     #inactivity_thread.start()
 
     # Create a PyWebView window to load the Flask app
-    webview.create_window('SusanDB', 'http://127.0.0.1:5000')
+    webview.create_window('SusanDB', 'http://127.0.0.1:5000', fullscreen=True)
     webview.start()
