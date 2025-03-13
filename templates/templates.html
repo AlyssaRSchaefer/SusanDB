@@ -19,11 +19,13 @@
   <div class="templates-container">
     <div class="templates-section">
       <div class="templates-controls">
-        <div class="templates-controls-left">
-          <a href="{{ url_for('new_template') }}" style="text-decoration: none;">
-            <div class="button primary-button">NEW TEMPLATE</div>
-          </a>
-        </div>
+        {% if session["mode"] != "view" %}
+            <div class="templates-controls-left">
+              <a href="{{ url_for('new_template') }}" style="text-decoration: none;">
+                <div id="new-template-btn" class="button primary-button">NEW TEMPLATE</div>
+              </a>
+            </div>
+        {% endif %}
       </div>
       <div class="templates-divider"></div>
       <div class="templates-table-container">
@@ -38,7 +40,9 @@
               <tr id="template-{{template_name}}" class="template-selectable-row" onclick="loadTemplateFields('{{ template_name }}')">
                 <td>
                   <span class="template-name">{{ template_name }}</span>
-                  <span class="templates-delete-icon" onclick="delete_template('{{ template_name }}')">🗑️</span>
+                  {% if session["mode"] != "view" %}
+                      <span class="templates-delete-icon" onclick="delete_template('{{ template_name }}')">🗑️</span>
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}
@@ -48,11 +52,15 @@
     </div>
 
     <div class="templates-section" id="fields-section" style="display: none;">
+      
       <div class="templates-controls">
+        {% if session["mode"] != "view" %}
         <div class="templates-controls-left">
           <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
         </div>
+        {% endif %}
       </div>
+      
       <div class="templates-divider"></div>
       <div class="templates-table-container">
         <table class="templates-table">
@@ -68,18 +76,21 @@
       </div>
       <div class="templates-controls">
         <div class="templates-controls-right">
-          <div id="save-fields-btn" class="button primary-button" style="display: none;" onclick="saveTemplateChanges()">
-            SAVE
-          </div>
-          <div id="revert-fields-btn" class="button primary-button" style="display: none;" onclick="revertTemplateChanges()">
-            REVERT
-          </div>
+          {% if session["mode"] != "view" %}
+            <div id="save-fields-btn" class="button primary-button" style="display: none;" onclick="saveTemplateChanges()">
+              SAVE
+            </div>
+            <div id="revert-fields-btn" class="button primary-button" style="display: none;" onclick="revertTemplateChanges()">
+              REVERT
+            </div>
+          {% endif %}
         </div>
     </div>
   </div>
 
  <script>
-
+  let session_mode = '{{session["mode"]}}'
+  // Check the session mode. if they are in view, do not allow buttons to be clicked that would lead to onedrive changes
   
 const templatesDict = JSON.parse('{{ templates_dict | tojson }}'); // Store the original templates
 const originalTemplatesDict = JSON.parse('{{ templates_dict | tojson }}'); // Deep copy for reverts
@@ -90,7 +101,8 @@ let sortableInstance = null;
 
 // Function to show the alert if there are unsaved changes
 function confirmUnsavedChanges(event) {
-    if (hasChanges) {
+    //extra check to make sure not in view mode
+    if (hasChanges && session_mode!="view") {
         const message = "You have unsaved changes. Are you sure you want to leave?";
         event.returnValue = message; // For modern browsers
         return message; // For older browsers (deprecated but still works in some cases)
@@ -98,6 +110,10 @@ function confirmUnsavedChanges(event) {
 }
 
 function revertTemplateChanges() {
+    //extra check to make sure not in view mode
+    if(session_mode=="view"){
+      return
+    }
     const userConfirmed = confirm("Are you sure you want to revert changes made?");
     if (!userConfirmed) {
         return;
@@ -111,7 +127,7 @@ function revertTemplateChanges() {
 }
 
 function loadTemplateFields(templateName, from_field = false) {
-    if (hasChanges && !from_field) {
+    if (hasChanges && !from_field && session_mode!="view") {
         const userConfirmed = confirm("You have unsaved changes. Are you sure you want to switch templates?");
         if (!userConfirmed) {
             return; // Stop the template loading if the user cancels
@@ -144,12 +160,15 @@ function loadTemplateFields(templateName, from_field = false) {
 
         cell.appendChild(fieldCell);
 
-        const deleteIcon = document.createElement('span');
-        deleteIcon.classList.add('templates-delete-icon'); // Reuse existing class
-        deleteIcon.textContent = '🗑️';
-        deleteIcon.onclick = () => confirmDeleteField(field);
-
-        cell.appendChild(deleteIcon);
+        //ONLY ALLOW DELETE IF IN EDIT MODE
+        if(session_mode!='view'){
+          const deleteIcon = document.createElement('span');
+          deleteIcon.classList.add('templates-delete-icon'); // Reuse existing class
+          deleteIcon.textContent = '🗑️';
+          deleteIcon.onclick = () => confirmDeleteField(field);
+          cell.appendChild(deleteIcon);
+        }
+        
         row.appendChild(cell);
         row.classList.add('templates-field-row');
 
@@ -161,7 +180,8 @@ function loadTemplateFields(templateName, from_field = false) {
         sortableInstance.destroy(); // Destroy the old instance to prevent duplication
     }
 
-    sortableInstance = new Sortable(fieldsBody, {
+    if(session_mode!="view"){
+      sortableInstance = new Sortable(fieldsBody, {
         animation: 150,
         ghostClass: 'sortable-ghost',
         onEnd: function () {
@@ -169,13 +189,18 @@ function loadTemplateFields(templateName, from_field = false) {
             document.getElementById('save-fields-btn').style.display = 'inline-block'; // Show save button
             document.getElementById('revert-fields-btn').style.display = 'inline-block';
         }
-    });
+      });
+    }
 
     // Initially hide the save button when there are no changes
     document.getElementById('fields-section').style.display = "flex";
 }
 
 function confirmDeleteField(fieldName) {
+    //extra check to make sure not in view mode
+    if(session_mode=="view"){
+      return
+    }
     if (confirm(`Are you sure you want to delete the field "${fieldName}"?`)) {
         deleteField(fieldName);
     }
@@ -193,6 +218,10 @@ function deleteField(fieldName) {
 }
 
 function saveTemplateChanges() {
+    //extra check to make sure not in view mode
+    if(session_mode=="view"){
+      return
+    }
     const fields = [];
     document.querySelectorAll(".templates-field-name").forEach(fieldCell => {
         const fieldName = fieldCell.textContent.trim();
@@ -229,6 +258,10 @@ function saveTemplateChanges() {
 }
 
 function delete_template(templateName) {
+    //extra check to make sure not in view mode
+    if(session_mode=="view"){
+      return
+    }
     const userConfirmed = confirm(`Are you sure you want to delete the template "${templateName}"?`);
     if (userConfirmed) {
         // Send a POST request to delete the template

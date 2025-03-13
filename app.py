@@ -56,9 +56,9 @@ def run_at_login():
     session["color_scheme"] = get_color_scheme(session["id"])
     global_last_update_time = time.time()
 
-#################################################################################
-# App specific and routing logic
-#################################################################################
+#########################################################################################
+# Lockfile Logic
+#########################################################################################
 
 @app.before_request
 def update_lock_timestamp_api():
@@ -66,9 +66,32 @@ def update_lock_timestamp_api():
 
     if global_mode == 'edit':
         current_time = time.time()
-        if current_time - global_last_update_time >= 60:
+        if current_time - global_last_update_time >= 120:
             update_lock_timestamp()
             global_last_update_time = current_time
+
+@app.route('/unlock_database')
+def unlock_database():
+    set_mode("edit")
+    return redirect(url_for('database'))
+
+@app.route('/enter_view_mode')
+def enter_view_mode():
+    set_mode("view")
+    session["color_scheme"]="viewing"
+    return redirect(url_for('database'))
+
+def set_mode(mode):
+    global global_mode
+    global_mode = mode
+    session["mode"] = mode
+    # need both to save it to sessions and a global var bc it could be accessed in and out of a flask enviornment
+    return True
+
+
+#################################################################################
+# App specific and routing logic
+#################################################################################
 
 # handles initial login logic
 @app.route('/login')
@@ -90,50 +113,24 @@ def login():
             else:
                 # Lock file doesn't exist, create it and enter edit mode
                 create_lock_file()
-                global global_mode
-                global_mode = 'edit'
+                set_mode("edit")
                 return render_template("database.html")
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
-
-@app.route('/enter_view_mode')
-def enter_view_mode():
-    global global_mode
-    global_mode = 'view'
-    return redirect(url_for('database'))
-
-@app.route('/unlock_database')
-def unlock_database():
-    global global_mode
-    global_mode = 'edit'
-    return redirect(url_for('database'))
 
 @app.route('/exit_app')
 def exit_app():
     webview.windows[0].destroy() #closes the window
     return "Exiting application" #this is just for debugging.
 
+# logout AND close app
 @app.route('/logout')
 def logout():
     global global_mode
     delete_lock_file(global_mode)
     session.clear()
     global_mode=None
-    return redirect(url_for('index'))
-
-@app.route('/logout_from_inactivity')
-def logout_from_inactivity():
-    global global_mode
-    try:
-        global_mode=None
-        print(session["access_token"])
-        delete_lock_file(global_mode)
-        print(session["access_token"])
-        time.sleep(3)
-        session.clear()
-        return "Logged out", 200
-    except:
-        return "Error", 500
+    return redirect(url_for('exit_app'))
         
 @app.route('/')
 def index():
@@ -199,7 +196,10 @@ def get_color_scheme_session():
 
 @app.route("/update_color_scheme", methods=["POST"])
 def update_color_scheme():
-    
+    #MAKE SURE NOT TO CHANGE IT IF IN VIEW MODE
+    if global_mode=="view":
+        return
+
     if "id" not in session:
         return jsonify({"error": "User not logged in"}), 403  # Unauthorized
 
@@ -907,11 +907,6 @@ if __name__ == '__main__':
     flask_thread.daemon = True
     flask_thread.start()
 
-    # Start the inactivity monitor thread
-    #inactivity_thread = threading.Thread(target=monitor_inactivity)
-    #inactivity_thread.daemon = True
-    #inactivity_thread.start()
-
     # Create a PyWebView window to load the Flask app
-    webview.create_window('SusanDB', 'http://127.0.0.1:5000', fullscreen=True)
+    webview.create_window('SusanDB', 'http://127.0.0.1:5000')
     webview.start()
