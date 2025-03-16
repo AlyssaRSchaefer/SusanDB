@@ -570,6 +570,14 @@ td, th {
     padding: 3px;
 }
 
+.details-icon-container {
+    background-color: var(--tertiary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30vh;
+}
+
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
 .templates-body {
     background-color: #f4f4f4;

@@ -3,6 +3,11 @@ const id = urlParams.get('id');
 const table = document.getElementById("details-table");
 const heading = document.querySelector("h1");
 
+function openDetailsUploadPage(){
+    const studentId = encodeURIComponent(id);
+    window.location.href = `/details_upload?id=${studentId}`;
+}
+
 function updateCellData(id, field, newValue) {
     fetch('/update_database_cell', {
         method: 'POST',

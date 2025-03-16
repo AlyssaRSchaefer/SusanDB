@@ -477,6 +477,13 @@ def details():
                            heading="test",  # Assuming only one student
                            back_link="/database")
 
+@app.route('/details_upload')
+def details_upload():
+    id = request.args.get('id')
+    return render_template('auxiliary/details_upload.html',
+        heading="Upload File",
+        back_link=f"/details?id={id}")
+
 @app.route('/store-selected-students', methods=['POST'])
 def store_selected_students():
     data = request.json
