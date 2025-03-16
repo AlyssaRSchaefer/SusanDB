@@ -2,9 +2,22 @@
 {% block title %}Import Data Page{% endblock %}
 
 {% block content %}
-    <div class="import">
-        <h1>IMPORT DATA PAGE</h1>
+<form id="upload-form" action="/process_import_excel_file" method="POST" enctype="multipart/form-data">
+    <div class="auxiliary-content auxiliary">
+        <h1>UPLOAD FILE</h1>
+        <div class="details-upload">
+            <div class="details-icon-container">
+                <label for="file-upload">
+                    <img src="static/icons/icon-upload.png" alt="upload file icon" style="cursor: pointer;">
+                </label>
+                <input type="file" id="file-upload" name="file" style="display: none;" accept=".xlsx,.xls">
+                <div id="file-name" class="file-name-placeholder">No file selected</div>
+            </div>
+            <button type="submit" class="primary-confirm-button confirm-button text" style="height: auto;">CONFIRM</button>
+        </div>
     </div>
+</form>
+
 {% endblock %}
 
 {% block script %}

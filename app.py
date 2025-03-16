@@ -4,7 +4,7 @@ import msal
 import sqlite3
 import webview
 import threading
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 import secrets
 import tempfile
 from openpyxl import load_workbook
@@ -16,9 +16,7 @@ import os
 import json
 from datetime import datetime
 import time
-import requests
-import urllib.parse
-
+import pandas as pd
 
 from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
@@ -545,6 +543,45 @@ def delete_template_api():
         return {"message": "Template deleted successfully."}, 200
     else:
         return {"error": "Error deleting the template. Please try again."}, 500
+
+@app.route('/process_import_excel_file', methods=['POST'])
+def process_import_excel_file():
+    if 'file' not in request.files:
+        print('No file part')
+        return redirect(url_for('import_data'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        print('No selected file')
+        return redirect(url_for('import_data'))
+
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        print('Invalid file type')
+        return redirect(url_for('import_data'))
+
+    try:
+        # Read the Excel file into a DataFrame
+        df = pd.read_excel(file)
+
+        # Extract field names from the first row (column headers)
+        field_names = df.columns.tolist()
+
+        # Convert rows into a list of dictionaries (one per student)
+        student_data = df.to_dict(orient='records')
+
+        # Debugging: print results to the console
+        print("Field Names:", field_names)
+        print("Student Data:", student_data)
+
+        susandb_columns = json.loads(get_all_fields().data)
+
+        # Pass data to the success template
+        return render_template('auxiliary/fields_to_update.html', susandb_columns=susandb_columns, columns=field_names, students=student_data, back_link="/import")
+
+    except Exception as e:
+        print(f'Error processing file: {str(e)}')
+        return redirect(url_for('import_data'))
 
 @app.route('/layout')
 def layout():

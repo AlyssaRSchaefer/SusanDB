@@ -16,6 +16,7 @@
 
     /* Navigation Bar Height */
     --navbar-height: 60px;
+    --title-bar-height: 30px;
 }
 
 /* COLOR SCHEMES*/
@@ -270,6 +271,7 @@ a {
     align-items: center;
     background-color: white;
     justify-content: right;
+    height: var(--title-bar-height)
 }
 
 .title-bar-buttons li {
@@ -304,7 +306,7 @@ a {
     align-items: center;
     justify-content: center;
     background-color: var(--secondary-color-highlight);
-    min-height: calc(100vh - var(--navbar-height));
+    min-height: calc(100vh - var(--navbar-height) - var(--title-bar-height));
 }
 
 .auxiliary h1, .database-heading, .admin h1 { 
@@ -635,6 +637,8 @@ td, th {
     align-items: center;
     justify-content: center;
     height: 30vh;
+    flex-direction: column;
+    gap:10px;
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
@@ -878,9 +882,51 @@ td, th {
 }
 
 /* IMPORT PAGE */
-.import h1 {
-    color: blue;
+
+.fields-to-update {
+    justify-content: center;
 }
+
+.import-tables-overall-container{
+    width:calc(100vw - var(--horizontal-margin)*3);
+    display: flex; 
+    justify-content: space-between; 
+    flex-direction: row;
+    min-height: fit-content;
+}
+
+
+@media (max-height: 1000px) {
+    .import-table-container {
+        max-height: 35vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .import-table-container {
+        max-height: 25vh;
+    }
+}
+
+@media (max-height: 400px) {
+    .import-table-container {
+        max-height: 200px;
+    }
+}
+
+.import-table-container {
+    overflow-y: auto; /* Enables scrolling */
+    width: 100%; /* Ensures it takes up full width */
+    position: relative;
+}
+
+.import-table-container thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--secondary-color); /* Adjust as needed */
+    z-index: 2;
+}
+
 
 /* NEW TEMPLATE PAGE */
 .new-template-input {

@@ -1,0 +1,108 @@
+{% extends 'auxiliary.html' %}
+
+{% block title %}Fields to Update{% endblock %}
+
+{% block content %}
+<!-- THIS IS THE FIRST POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE THE FIELDS THEY WANT TO UPDATE-->
+<div class="templates-section fields-to-update" id="fields-to-update">
+    <h1>FIELDS TO UPDATE</h1>
+    <div class="templates-table-container">
+        <table class="templates-table">
+            <thead>
+                <tr>
+                    <th>
+                        <span class="checkbox-wrapper">
+                            <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll()">
+                        </span>
+                        EXCEL FIELDS
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for column in columns %}
+                <tr>
+                    <td>
+                        <span class="checkbox-wrapper">
+                            <!--the class new-template-checkbox is there to provide the same css as other pages. the fields-to-update-checkbox is there for js purposes-->
+                            <input type="checkbox" class="new-template-checkbox fields-to-update-checkbox" value="{{ column }}">
+                        </span>
+                        {{ column }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button class="primary-button new-template-button" onclick="submitFieldsToUpdate()" 
+            style="width: 50%; margin-top: 30px; align-self: center;">
+        CONFIRM
+    </button>
+</div>
+
+<!-- THIS IS THE SECOND POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE THE PRIMARY KEY(S)-->
+<div id="choose-mapping-key" style="display: none; flex-direction: column; align-items: center;">
+    <h1>CHOOSE MAPPING KEY</h1>
+    
+    <div class="import-tables-overall-container">
+        <!-- Table for Excel Fields (from the first pop-up) -->
+        <div class="import-table-container" style="flex: 1; margin-right: 20px;">
+                <table class="templates-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                EXCEL FIELDS
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for column in columns %}
+                        <tr>
+                            <td>
+                                <span class="checkbox-wrapper">
+                                    <input type="checkbox" class="new-template-checkbox excel-fields-checkbox" value="{{ column }}">
+                                </span>
+                                {{ column }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+        </div>
+
+        <!-- Table for SusanDB Fields (from susandb_columns variable) -->
+        <div class="import-table-container" style="flex: 1;">
+                <table class="templates-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                SUSANDB FIELDS
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for column in susandb_columns %}
+                        <tr>
+                            <td>
+                                <span class="checkbox-wrapper">
+                                    <input type="checkbox" class="new-template-checkbox susandb-fields-checkbox" value="{{ column }}">
+                                </span>
+                                {{ column }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    </div>
+
+    <button class="primary-button new-template-button" onclick="submitPrimaryKeysToUpdate()" 
+            style="width: 50%; margin-top: 30px; align-self: center;">
+        CONFIRM
+    </button>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="static/js/fields_to_update.js"></script>
+{% endblock %}
