@@ -88,7 +88,6 @@ def set_mode(mode):
     # need both to save it to sessions and a global var bc it could be accessed in and out of a flask enviornment
     return True
 
-
 #################################################################################
 # App specific and routing logic
 #################################################################################
@@ -148,7 +147,7 @@ def logout():
     delete_lock_file(global_mode)
     session.clear()
     global_mode=None
-    return redirect(url_for('exit_app'))
+    return redirect(url_for('index'))
         
 @app.route('/')
 def index():

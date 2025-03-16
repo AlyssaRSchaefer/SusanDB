@@ -9,7 +9,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 </head>
 <body class="{{session['color_scheme']}}">
-  <nav class="navbar">
+  <ul class="title-bar-buttons pywebview-drag-region">
+    <li><a href="{{ url_for('minimize') }}" class="title-bar-button">&#128469;</a></li>
+    <li><a href="{{ url_for('shrink') }}" class="title-bar-button">&#128471;</a></li>
+    <li><a href="{{ url_for('logout') }}" class="title-bar-button">&#10006;</a></li>
+  </ul>
+
+  <nav class="navbar pywebview-drag-region">
     <div class="navbar-elements">
       <div class="navbar-heading">
         <div class="navbar-name">SusanDB</div>
@@ -17,9 +23,13 @@
         <img src="static\icons\icon-db.png" alt="database icon">
         <ul class="navbar-links">
           <li><a href="{{ url_for('database') }}">DATABASE</a></li>
-          <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
+          {% if session["mode"] != "view" %}
+            <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
+          {% endif %}
           <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
-          <li><a href="{{ url_for('admin') }}">ADMIN</a></li>
+          {% if session["mode"] != "view" %}
+              <li><a href="{{ url_for('admin') }}">ADMIN</a></li>
+          {% endif %}
         </ul>
       </div>
       <ul class="navbar-links">
@@ -27,6 +37,12 @@
       </ul>
     </div>
   </nav>
+  {% if session["mode"] == "view" %}
+      <div class="view-mode-icon">
+        <img src="static\icons\icon-search.png" width="50px">
+      </div>
+  {% endif %}
+
   <div class="auxiliary">
     <a href="{{ back_link }}" class="back-button"> <!-- Dynamic back link -->
         <img src="static/icons/icon-back.png" alt="Back" class="back-icon">
