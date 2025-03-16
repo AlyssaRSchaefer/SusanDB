@@ -1,4 +1,4 @@
-from flask import Flask, g, session, render_template, jsonify, request
+from flask import Flask, g, session, render_template, jsonify, request, Response
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -14,10 +14,14 @@ import re
 from fpdf import FPDF
 import os
 import json
+from datetime import datetime
+import time
+import requests
+import urllib.parse
 
 
-from onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
-
+from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
+from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
@@ -37,16 +41,52 @@ FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
 
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
+global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
+global_last_update_time = 0
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
 
 # running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
 def run_at_login():
+    global global_last_update_time
     user_data = get_user_profile(session["access_token"])
     session["name"] = user_data.get("displayName", "Unknown User")
     session["id"] = user_data.get("id")
     session["color_scheme"] = get_color_scheme(session["id"])
+    global_last_update_time = time.time()
+
+#########################################################################################
+# Lockfile Logic
+#########################################################################################
+
+@app.before_request
+def update_lock_timestamp_api():
+    global global_last_update_time
+
+    if global_mode == 'edit':
+        current_time = time.time()
+        if current_time - global_last_update_time >= 120:
+            update_lock_timestamp()
+            global_last_update_time = current_time
+
+@app.route('/unlock_database')
+def unlock_database():
+    set_mode("edit")
+    return redirect(url_for('database'))
+
+@app.route('/enter_view_mode')
+def enter_view_mode():
+    set_mode("view")
+    session["color_scheme"]="viewing"
+    return redirect(url_for('database'))
+
+def set_mode(mode):
+    global global_mode
+    global_mode = mode
+    session["mode"] = mode
+    # need both to save it to sessions and a global var bc it could be accessed in and out of a flask enviornment
+    return True
 
 #################################################################################
 # App specific and routing logic
@@ -56,19 +96,57 @@ def run_at_login():
 @app.route('/login')
 def login():
     with app.app_context():
-        # need access token to interact in any way with OneDrive API
         result = msal_app.acquire_token_interactive(SCOPES)
 
         if "access_token" in result:
             session["access_token"] = result.get("access_token")
             run_at_login()
-            return render_template("database.html", delete_mode=False)
+            webview.windows[0].maximize()
+
+            is_lock_file = check_lock_file()
+
+            if is_lock_file:
+                timestamp = is_lock_file[0]
+                last_user = is_lock_file[1]
+                dt = datetime.fromtimestamp(int(timestamp))
+                return render_template("lockfile_exists.html", last_user=last_user, last_update_time=dt.strftime("%H:%M on %m/%d"))
+            else:
+                # Lock file doesn't exist, create it and enter edit mode
+                create_lock_file()
+                set_mode("edit")
+                return render_template("database.html")
         else:
             return f"Login failed: {result.get('error_description', 'Unknown error')}"
 
+@app.route('/exit_app')
+def exit_app():
+    webview.windows[0].destroy() #closes the window
+    return Response(status=204)  # No Content
+
+@app.route('/minimize')
+def minimize():
+    webview.windows[0].minimize()
+    return Response(status=204)  # No Content
+
+# Example shrink function
+@app.route('/shrink')
+def shrink():
+    print(webview.windows[0].height)
+    print(webview.windows[0].width)
+    if webview.windows[0].height==2000 and webview.windows[0].width==2800:
+        print("trying to max")
+        webview.windows[0].toggle_fullscreen()
+    else:
+        webview.windows[0].resize(2800, 2000)
+    return Response(status=204)  # No Content
+
+# logout AND close app
 @app.route('/logout')
 def logout():
+    global global_mode
+    delete_lock_file(global_mode)
     session.clear()
+    global_mode=None
     return redirect(url_for('index'))
         
 @app.route('/')
@@ -135,7 +213,10 @@ def get_color_scheme_session():
 
 @app.route("/update_color_scheme", methods=["POST"])
 def update_color_scheme():
-    
+    #MAKE SURE NOT TO CHANGE IT IF IN VIEW MODE
+    if global_mode=="view":
+        return
+
     if "id" not in session:
         return jsonify({"error": "User not logged in"}), 403  # Unauthorized
 
@@ -843,6 +924,14 @@ def _build_msal_app():
 
 msal_app = _build_msal_app()
 
+def on_closing(window):
+    if global_mode=='edit':
+        window.evaluate_js("alert('Please logout first.');")
+        #THEY MUST EXIT THROUGH A LOGOUT
+        return False
+    else:
+        return True
+
 # Main entry point
 if __name__ == '__main__':
     # Start Flask server in a separate thread
@@ -851,5 +940,6 @@ if __name__ == '__main__':
     flask_thread.start()
 
     # Create a PyWebView window to load the Flask app
-    webview.create_window('SusanDB', 'http://127.0.0.1:5000', fullscreen=True)
+    window = webview.create_window('SusanDB', 'http://127.0.0.1:5000', frameless=True)
+    window.events.closing += on_closing
     webview.start()

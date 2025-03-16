@@ -124,3 +124,4 @@ def get_user_profile(access_token):
         return response.json()
     else:
         return {"error": f"Error: {response.status_code} - {response.text}"}
+

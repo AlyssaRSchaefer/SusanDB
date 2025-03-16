@@ -163,6 +163,40 @@ a {
     text-decoration: none;
 }
 
+.button.primary-button.disabled-button {
+    opacity: 0.5;
+    background-color: gray;
+    cursor: not-allowed;
+    position: relative; /* Needed for tooltip positioning */
+    pointer-events: auto;
+}
+
+/* Tooltip styling */
+.button.primary-button.disabled-button::after {
+    content: "You are in view mode and cannot make changes";
+    position: absolute;
+    top: 110%; /* Position it above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    opacity: 0;
+    pointer-events: none; /* Tooltip itself shouldn't interfere */
+    transition: opacity 0.2s ease-in-out;
+    z-index: 1000000000;
+}
+
+/* Show tooltip on hover */
+.button.primary-button.disabled-button:hover::after {
+    opacity: 1;
+}
+
+
+
 /* NAVIGATION BAR */
 .navbar {
     background-color: var(--primary-color);
@@ -227,6 +261,31 @@ a {
     width: 100%;
     align-items: center;
   }
+
+  .title-bar-buttons {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    background-color: white;
+    justify-content: right;
+}
+
+.title-bar-buttons li {
+    margin-right: 20px;
+}
+
+.title-bar-button {
+    text-decoration: none;
+    font-size: 20px;
+    color: var(--quarternary-color);
+}
+
+.title-bar-button:hover {
+    cursor: pointer;
+    color: var(--primprimary-color-highlight);
+}
 
 /* MULTIPLE PAGES */
 .database, .import, .templates, .admin, .auxiliary-content, .database-auxiliary-content {
@@ -896,7 +955,6 @@ td, th {
     margin-top: 10px auto;
     text-align: center;
     transition: margin-top 0.5s ease, all 0.5s ease;
-    max-width: 800px;
   }
   /* After confirmation, slide it to the top of the body (just below the header) 
      and change layout to horizontal */
@@ -944,4 +1002,44 @@ td, th {
 
 .admin-label {
     margin-left: 5px;
+}
+
+/* MISC */
+/* Position the icon in the bottom left corner */
+.view-mode-icon {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 50px; /* Adjust to your icon's width */
+    height: 50px; /* Adjust to your icon's height */
+    opacity: 0.8;
+    z-index: 999999999999999;
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Tooltip styling */
+.view-mode-icon::after {
+    content: "You are currently in view mode. No changes can be saved.";
+    position: absolute;
+    top: -200%; /* Adjust as needed */
+    left: 120%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    opacity: 0; /* Set to 1 by default */
+    transition: opacity 0.3s ease-in-out;
+    width: 70px;
+}
+
+/* Show tooltip on hover */
+.view-mode-icon:hover::after {
+    opacity: 1; /* Redundant, but ensures it's 1 on hover */
+}
+
+/* Optional: Add a slight zoom-in effect on hover */
+.view-mode-icon:hover {
+    transform: scale(1.1);
 }

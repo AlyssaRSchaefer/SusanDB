@@ -9,7 +9,7 @@
   
   <style>
     body {
-      background-color: var(--primary-color-highlight);
+      background-color: rgb(215, 175, 181);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -26,7 +26,7 @@
       color: white;
       margin-bottom: 20px;
       font-weight: lighter;
-      font-size: 500%;
+      font-size: 400%;
       font-family: var(--font-primary);
     }
   
@@ -34,10 +34,10 @@
       background: var(--secondary-color);
       padding: 30px;
       border-radius: 15px;
-      display: flex;
+      display: block;
       justify-content: center;
       align-items: center;
-      width: 250px;
+      min-width: 250px;
       height: 80px;
       margin: 20px auto 0; /* This ensures it is centered and adds space from the login box */
     }
@@ -63,17 +63,7 @@
   
     .icon {
       width: 120px;
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-  
-    .left-icon {
-      left: -150px;
-    }
-  
-    .right-icon {
-      right: -150px;
+      height: 120px;
     }
   
     .access-denied-box {
@@ -93,39 +83,40 @@
     }
   </style>
 </head>
-<body class="pywebview-drag-region">
-  <div id="closeButton" style="position: absolute; top: 10px; right: 20px; cursor: pointer; font-size: x-large; font-weight: bold; color: white; opacity: .8;">&#10006;</div>
+<body>
 
   <div class="container">
-    <h1>SusanDB</h1>
-
-    <div class="login-box">
-      <form action="{{ url_for('login') }}" method="get" onsubmit="showLoading()">
-        <button class="primary-button" style="padding: 10px;" id="loginButton" type="submit">LOGIN WITH MICROSOFT</button>
-        <div id="loadingSpinner" class="loading"></div>
-      </form>
+    <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="static/icons/icon-lock.png" alt="Lock Icon" class="icon left-icon">
+        <h1>Database<br>Locked</h1>
+        <img src="static/icons/icon-lock.png" alt="Lock Icon" class="icon right-icon">
     </div>
 
-    {% if access_denied %}
-      <div class="access-denied-box">
-        <p>Sorry {{ name }}, but you do not have access to this application. Please sign in with a different account.</p>
-      </div>
-    {% endif %}
+    <div class="login-box">
+        <p>Our records indicate that <b>{{ last_user }}</b> is currently using the database, and last made a change at <b>{{ last_update_time }}</b>.<br> Concurrent users could lead to changes not being saved or data getting deleted.</p>
+        <br>
+        <button class="primary-button text" id="viewModeButton" style="padding: 10px; height: auto;">Enter View Mode</button>
+        <button class="primary-button text" id="unlockButton" style="padding: 10px; height: auto;">Unlock Database</button>
+        <button class="primary-button text" id="exitButton" style="padding: 10px; height: auto;">Come Back Later</button>
+    </div>
 
-    <img src="static/icons/icon-nurse.png" alt="Doctor Icon" class="icon left-icon">
-    <img src="static/icons/icon-db.png" alt="Database Icon" class="icon right-icon">
   </div>
 
   <script>
-    function showLoading() {
-      document.getElementById("loginButton").style.display = "none";
-      document.getElementById("loadingSpinner").style.display = "block";
-      document.getElementById("access-denied-box").style.display = "none";
-    }
-
-    document.getElementById('closeButton').addEventListener('click', function() {
-        fetch('/exit_app'); // Call the Flask exit_app route
+    document.getElementById('viewModeButton').addEventListener('click', function() {
+        window.location.href = '/enter_view_mode';
     });
-  </script>
+
+    document.getElementById('unlockButton').addEventListener('click', function() {
+        if (confirm("Are you sure you want to unlock the database? This should only be done if you think the app crashed, and the previous lock file was not successfully removed. If someone is currently using the database, this could lead to problems.")) {
+            window.location.href = '/unlock_database';
+        }
+    });
+
+    document.getElementById('exitButton').addEventListener('click', function() {
+        window.location.href = '/exit_app';
+    });
+</script>
+
 </body>
 </html>
