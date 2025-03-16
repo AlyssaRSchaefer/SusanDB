@@ -43,68 +43,65 @@
 <!-- THIS IS THE SECOND POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE THE PRIMARY KEY(S)-->
 <div id="choose-mapping-key" style="display: none; flex-direction: column; align-items: center;">
     <h1>CHOOSE MAPPING KEY</h1>
-    
-    <div class="import-tables-overall-container">
-        <!-- Table for Excel Fields (from the first pop-up) -->
-        <div class="import-table-container" style="flex: 1; margin-right: 20px;">
-                <table class="templates-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                EXCEL FIELDS
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for column in columns %}
-                        <tr>
-                            <td>
-                                <span class="checkbox-wrapper">
-                                    <input type="checkbox" class="new-template-checkbox excel-fields-checkbox" value="{{ column }}">
-                                </span>
-                                {{ column }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+    <!-- Rule Creation Section -->
+    <div class="rule-creation-container import-table-container" style="width: 100%; margin-bottom: 20px;">
+        <div class="rule-builder">
+            <!-- Excel Fields Side -->
+            <div class="excel-side">
+                <select class="excel-field-select select">
+                    <option value="">Select Excel Field</option>
+                    {% for column in columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                </select>
+                <button class="add-excel-button" style="display: none;">(+)</button>
+            </div>
+
+            <!-- Equals Sign -->
+            <div class="equals-sign">=</div>
+
+            <!-- SusanDB Fields Side -->
+            <div class="susandb-side">
+                <select class="susandb-field-select select">
+                    <option value="">Select SusanDB Field</option>
+                    {% for column in susandb_columns %}
+                        <option value="{{ column }}">{{ column }}</option>
+                    {% endfor %}
+                </select>
+                <button class="add-susandb-button" style="display: none;">(+)</button>
+            </div>
         </div>
 
-        <!-- Table for SusanDB Fields (from susandb_columns variable) -->
-        <div class="import-table-container" style="flex: 1;">
-                <table class="templates-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                SUSANDB FIELDS
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for column in susandb_columns %}
-                        <tr>
-                            <td>
-                                <span class="checkbox-wrapper">
-                                    <input type="checkbox" class="new-template-checkbox susandb-fields-checkbox" value="{{ column }}">
-                                </span>
-                                {{ column }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <!-- Add Rule Button -->
+        <button class="primary-button add-rule-button" style="margin-top: 10px;" disabled>
+            Add Rule
+        </button>
     </div>
 
-    <button class="primary-button new-template-button" onclick="submitPrimaryKeys()" 
-            style="width: 50%; margin-top: 30px; align-self: center;">
+    <!-- Rules Table -->
+    <div class="rules-table-container import-table-container" style="width: 100%;">
+        <table class="rules-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>Mapping Keys</th>
+                </tr>
+                <tr>
+                    <th>Excel Fields</th>
+                    <th>SusanDB Fields</th>
+                </tr>
+            </thead>
+            <tbody id="rules-body">
+                <!-- Rules will be dynamically added here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Confirm Button -->
+    <button class="primary-button confirm-button" onclick="submitPrimaryKeys()" 
+            style="width: 50%; margin-top: 30px; align-self: center; display: none;">
         CONFIRM
     </button>
-</div>
-
-<!--THIS IS THE THIRD POP-UP. THE USER WILL CONFIRM HOW TO USE THIER PRIMARY KEY(S)-->
-<div id="confirm-mapping-key">
-    
 </div>
 {% endblock %}
 
