@@ -44,57 +44,50 @@
 <div id="choose-mapping-key" style="display: none; flex-direction: column; align-items: center;">
     <h1>CHOOSE MAPPING KEY</h1>
 
-    <!-- Rule Creation Section -->
-    <div class="rule-creation-container import-table-container" style="width: 100%; margin-bottom: 20px;">
-        <div class="rule-builder">
-            <!-- Excel Fields Side -->
-            <div class="excel-side">
-                <select class="excel-field-select select">
-                    <option value="">Select Excel Field</option>
-                    {% for column in columns %}
-                        <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
-                </select>
-                <button class="add-excel-button" style="display: none;">(+)</button>
-            </div>
-
-            <!-- Equals Sign -->
-            <div class="equals-sign">=</div>
-
-            <!-- SusanDB Fields Side -->
-            <div class="susandb-side">
-                <select class="susandb-field-select select">
-                    <option value="">Select SusanDB Field</option>
-                    {% for column in susandb_columns %}
-                        <option value="{{ column }}">{{ column }}</option>
-                    {% endfor %}
-                </select>
-                <button class="add-susandb-button" style="display: none;">(+)</button>
-            </div>
-        </div>
-
-        <!-- Add Rule Button -->
-        <button class="primary-button add-rule-button" style="margin-top: 10px;" disabled>
-            Add Rule
-        </button>
-    </div>
-
     <!-- Rules Table -->
     <div class="rules-table-container import-table-container" style="width: 100%;">
         <table class="rules-table" style="width: 100%;">
             <thead>
                 <tr>
-                    <th>Mapping Keys</th>
-                </tr>
-                <tr>
                     <th>Excel Fields</th>
+                    <th></th>
                     <th>SusanDB Fields</th>
                 </tr>
             </thead>
             <tbody id="rules-body">
+                <tr>
+                    <td>
+                        <!-- Excel Fields Side -->
+                        <div class="excel-side">
+                            <select class="excel-field-select select-import">
+                                <option value="">Select Excel Field</option>
+                                {% for column in columns %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="add-excel-button" style="display: none;">+</button>
+                        </div>
+                    </td>
+                    <td>=</td>
+                    <td>            
+                        <!-- SusanDB Fields Side -->
+                        <div class="susandb-side">
+                            <select class="susandb-field-select select-import">
+                                <option value="">Select SusanDB Field</option>
+                                {% for column in susandb_columns %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="add-susandb-button" style="display: none;">+</button>
+                        </div>
+                    </td>
+                </tr>
                 <!-- Rules will be dynamically added here -->
             </tbody>
         </table>
+        <button class="primary-button add-rule-button" style="margin-top: 10px;" disabled>
+            Add Rule
+        </button>
     </div>
 
     <!-- Confirm Button -->
@@ -103,6 +96,11 @@
         CONFIRM
     </button>
 </div>
+
+<!-- NEED THIS TO PASS TO THE JS FILE-->
+<div id="data-holder" 
+     data-columns='{{ columns | tojson | safe }}' 
+     data-susandb-columns='{{ susandb_columns | tojson | safe }}'></div>
 {% endblock %}
 
 {% block script %}

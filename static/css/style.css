@@ -924,6 +924,23 @@ td, th {
     position: relative;
 }
 
+.add-excel-button, .add-susandb-button {
+    background-color: rgba(255, 255, 255, 0);
+    font-weight: bold;
+    font-family: var(--font-primary);
+    color: var(--primary-color-highlight);
+    border: none;
+}
+
+.add-excel-button:hover, .add-susandb-button:hover {
+    background-color: rgba(255, 255, 255, 0.199);
+    font-weight: bolder;
+}
+
+.select.excel-field-select, .select.susandb-field-select{
+    width:min-content;
+}
+
 .import-table-container thead {
     position: sticky;
     top: 0;

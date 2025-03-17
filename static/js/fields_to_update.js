@@ -1,10 +1,11 @@
 // Variable to hold the selected fields
 let selectedFields = [];
 let primaryKeys = {};
-console.log("Columns JSON String:", '{{ columns | tojson }}');
-console.log("SusanDB Columns JSON String:", '{{ susandb_columns | tojson }}');
-const columns = JSON.parse('{{ columns | tojson}}');
-const susandbColumns = JSON.parse('{{ susandb_columns | tojson}}');
+
+const dataHolder = document.getElementById('data-holder');
+const columns = JSON.parse(dataHolder.getAttribute('data-columns'));
+const susandbColumns = JSON.parse(dataHolder.getAttribute('data-susandb-columns'));
+
 
 // STEP 1
 // Function to collect selected fields and switch to the second popup
@@ -68,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Function to add a new dropdown and (+) button
     function addDropdown(side, type) {
         const newDropdown = document.createElement('select');
-        newDropdown.className = `${type}-field-select`;
+        newDropdown.className = `${type}-field-select select-import`;
         populateDropdown(newDropdown, type === 'excel' ? columns : susandbColumns);
 
         const newPlusButton = document.createElement('button');
