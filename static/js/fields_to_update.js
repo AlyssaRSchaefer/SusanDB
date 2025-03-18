@@ -1,6 +1,6 @@
 // Variable to hold the selected fields
 let selectedFields = [];
-let primaryKeys = {};
+let mappingRules = [];
 
 const dataHolder = document.getElementById('data-holder');
 const columns = JSON.parse(dataHolder.getAttribute('data-columns'));
@@ -29,23 +29,21 @@ function submitFieldsToUpdate() {
 // STEP 2
 // Function to handle the submission of selected primary keys (in both tables)
 function submitPrimaryKeys() {
-    // Get selected Excel fields
-    const selectedExcelFields = Array.from(document.querySelectorAll('.excel-fields-checkbox:checked')).map(checkbox => checkbox.value);
-
-    // Get selected SusanDB fields
-    const selectedSusanDBFields = Array.from(document.querySelectorAll('.susandb-fields-checkbox:checked')).map(checkbox => checkbox.value);
-
-    // Store the selected fields in the primaryKeys dictionary
-    primaryKeys = {
-        excelFields: selectedExcelFields,
-        susandbFields: selectedSusanDBFields,
-    };
-
-    console.log(primaryKeys); // Log the primaryKeys dictionary to check the data
-
     // Optionally, proceed with the next steps after submitting
+    fillMapDataTable();
     document.getElementById('choose-mapping-key').style.display = 'none';
-    document.getElementById('confirm-mapping-key').style.display = 'flex';
+    document.getElementById('map-data').style.display = 'flex';
+}
+
+// Function to populate a dropdown with options
+function populateDropdown(dropdown, options) {
+    dropdown.innerHTML = '<option value="">Select ' + (dropdown.classList.contains('excel-field-select') ? 'Excel' : 'SusanDB' + ' Field</option>');
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option;
+        optionElement.textContent = option;
+        dropdown.appendChild(optionElement);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -53,23 +51,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const susandbSide = document.querySelector('.susandb-side');
     const addRuleButton = document.querySelector('.add-rule-button');
     const rulesBody = document.getElementById('rules-body');
-    const confirmButton = document.querySelector('.confirm-button');
-
-    // Function to populate a dropdown with options
-    function populateDropdown(dropdown, options) {
-        dropdown.innerHTML = '<option value="">Select ' + (dropdown.classList.contains('excel-field-select') ? 'Excel' : 'SusanDB' + ' Field</option>');
-        options.forEach(option => {
-            const optionElement = document.createElement('option');
-            optionElement.value = option;
-            optionElement.textContent = option;
-            dropdown.appendChild(optionElement);
-        });
-    }
+    const confirmButton = document.getElementById('map-key-confirm-button');
 
     // Function to add a new dropdown and (+) button
     function addDropdown(side, type) {
         const newDropdown = document.createElement('select');
-        newDropdown.className = `${type}-field-select select-import`;
+        newDropdown.className = `${type}-field-select select-import select`;
         populateDropdown(newDropdown, type === 'excel' ? columns : susandbColumns);
 
         const newPlusButton = document.createElement('button');
@@ -113,6 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         addRuleButton.disabled = !(excelFilled && susandbFilled);
+        addRuleButton.style.display = addRuleButton.disabled ? "none" : "table-cell";
     }
 
     // Add initial event listeners
@@ -151,15 +139,22 @@ document.addEventListener('DOMContentLoaded', function () {
         const susandbValues = Array.from(susandbFields).map(select => select.value).filter(Boolean);
 
         if (excelValues.length > 0 && susandbValues.length > 0) {
+            // Store the mapping rule
+            mappingRules.push({
+                excel: excelValues,
+                susandb: susandbValues
+            });
+            console.log("Mapping Rules:", mappingRules); // Log the mapping rules
+
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
-                <td>${excelValues.join(', ')}</td>
-                <td>${susandbValues.join(', ')}</td>
+                <td>${excelValues.join(' + ')}</td>
+                <td style="width: 3ch; text-align: center;">=</td>
+                <td>${susandbValues.join(' + ')}</td>
             `;
-            rulesBody.appendChild(newRow);
-
+            rulesBody.prepend(newRow);
             // Show the Confirm button if it's the first rule
-            if (rulesBody.children.length === 1) {
+            if (rulesBody.children.length == 2) {
                 confirmButton.style.display = 'block';
             }
 
@@ -169,15 +164,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     <option value="">Select Excel Field</option>
                     ${columns.map(column => `<option value="${column}">${column}</option>`).join('')}
                 </select>
-                <button class="add-excel-button" style="display: none;">(+)</button>
+                <button class="add-excel-button" style="display: none;">+</button>
             `;
             susandbSide.innerHTML = `
                 <select class="susandb-field-select select">
                     <option value="">Select SusanDB Field</option>
                     ${susandbColumns.map(column => `<option value="${column}">${column}</option>`).join('')}
                 </select>
-                <button class="add-susandb-button" style="display: none;">(+)</button>
+                <button class="add-susandb-button" style="display: none;">+</button>
             `;
+            
 
             // Reattach event listeners
             excelSide.querySelector('.excel-field-select').addEventListener('change', function () {
@@ -207,10 +203,69 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             addRuleButton.disabled = true;
+            addRuleButton.style.display="none";
         }
     });
 });
+
 // STEP 3
+// Map data
+// Function to fill the map-data table with selectedFields and dropdowns
+function fillMapDataTable() {
+    const tableBody = document.querySelector('#map-data .import-table tbody');
+    tableBody.innerHTML = ''; // Clear existing rows
+
+    selectedFields.forEach(field => {
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td>${field}</td>
+            <td>
+                <select class="susandb-map-select select-import select unselected"></select>
+            </td>
+        `;
+        tableBody.appendChild(newRow);
+
+        const dropdown = newRow.querySelector('.susandb-map-select');
+        populateDropdown(dropdown, susandbColumns);
+
+        // Add event listener to the dropdown
+        dropdown.addEventListener('change', function () {
+            checkSubmitButton();
+            if (this.value) {
+                dropdown.classList.remove('unselected');
+                dropdown.classList.add('import-selected');
+            } else {
+                dropdown.classList.add('unselected');
+                dropdown.classList.remove('import-selected');
+            }
+        });
+    });
+
+    document.getElementById('map-data').style.display = 'flex'; // Show the table
+    checkSubmitButton();
+}
+
+function checkSubmitButton() {
+    const dropdowns = document.querySelectorAll('.susandb-map-select');
+    const submitButton = document.getElementById('submit-mapping-data-btn');
+    let allSelected = true;
+
+    dropdowns.forEach(dropdown => {
+        if (!dropdown.value) { // Check if any dropdown is empty
+            allSelected = false;
+        }
+    });
+
+    if (allSelected) {
+        submitButton.style.display = 'block';
+    } else {
+        submitButton.style.display = 'none';
+    }
+}
+
+function submitMappingData() {
+    // implement!!
+}
 
 function toggleSelectAll() {
     let checkboxes = document.querySelectorAll('.fields-to-update-checkbox');

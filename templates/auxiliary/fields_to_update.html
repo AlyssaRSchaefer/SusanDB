@@ -36,7 +36,7 @@
 
     <button class="primary-button new-template-button" onclick="submitFieldsToUpdate()" 
             style="width: 50%; margin-top: 30px; align-self: center;">
-        CONFIRM
+        NEXT
     </button>
 </div>
 
@@ -46,20 +46,20 @@
 
     <!-- Rules Table -->
     <div class="rules-table-container import-table-container" style="width: 100%;">
-        <table class="rules-table" style="width: 100%;">
+        <table class="rules-table import-table" style="width: 100%;">
             <thead>
                 <tr>
                     <th>Excel Fields</th>
-                    <th></th>
+                    <th style="width: 3ch; text-align: center;"></th>
                     <th>SusanDB Fields</th>
                 </tr>
             </thead>
             <tbody id="rules-body">
-                <tr>
+                <tr style="opacity: .5;">
                     <td>
                         <!-- Excel Fields Side -->
                         <div class="excel-side">
-                            <select class="excel-field-select select-import">
+                            <select class="excel-field-select select-import select">
                                 <option value="">Select Excel Field</option>
                                 {% for column in columns %}
                                     <option value="{{ column }}">{{ column }}</option>
@@ -68,11 +68,11 @@
                             <button class="add-excel-button" style="display: none;">+</button>
                         </div>
                     </td>
-                    <td>=</td>
+                    <td style="width: 3ch; text-align: center;">=</td>
                     <td>            
                         <!-- SusanDB Fields Side -->
                         <div class="susandb-side">
-                            <select class="susandb-field-select select-import">
+                            <select class="susandb-field-select select-import select">
                                 <option value="">Select SusanDB Field</option>
                                 {% for column in susandb_columns %}
                                     <option value="{{ column }}">{{ column }}</option>
@@ -85,15 +85,41 @@
                 <!-- Rules will be dynamically added here -->
             </tbody>
         </table>
-        <button class="primary-button add-rule-button" style="margin-top: 10px;" disabled>
-            Add Rule
-        </button>
     </div>
+    <button class="primary-button add-rule-button text" style="margin-top: 10px; height: auto; display: none;" disabled>
+        Add Rule
+    </button>
 
     <!-- Confirm Button -->
-    <button class="primary-button confirm-button" onclick="submitPrimaryKeys()" 
-            style="width: 50%; margin-top: 30px; align-self: center; display: none;">
-        CONFIRM
+    <button id="map-key-confirm-button" class="primary-button confirm-button text" onclick="submitPrimaryKeys()" 
+            style="width: 50%; margin-top: 30px; align-self: center; display: none; height:auto;">
+        NEXT
+    </button>
+</div>
+
+<!-- THIS IS THE THIRD POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE HOW TO MAP EACH KEY-->
+<div id="map-data" style="display: none; flex-direction: column; align-items: center;">
+    <h1>MAP DATA</h1>
+    <div class="templates-table-container">
+        <table class="import-table">
+            <thead>
+                <tr>
+                    <th>
+                        EXCEL FIELDS
+                    </th>
+                    <th>
+                        CORRESPONDING SUSAN DB FIELD
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <button id="submit-mapping-data-btn" class="primary-button new-template-button" onclick="submitMappingData()" 
+            style="width: 50%; margin-top: 30px; align-self: center; display:none">
+        SUBMIT
     </button>
 </div>
 

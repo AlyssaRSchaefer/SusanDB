@@ -887,12 +887,41 @@ td, th {
     justify-content: center;
 }
 
+.susandb-map-select.unselected {
+    background-color: var(--primary-color-highlight);
+    box-shadow: 0 0 15px var(--primary-color-highlight);
+    color: white;
+    appearance: auto;
+}
+
+.susandb-map-select.import-selected {
+    border: 2px solid var(--primary-color-highlight);
+    appearance: auto;
+}
+
 .import-tables-overall-container{
     width:calc(100vw - var(--horizontal-margin)*3);
     display: flex; 
     justify-content: space-between; 
     flex-direction: row;
     min-height: fit-content;
+}
+
+.import-table {
+    width:calc(100vw - var(--horizontal-margin)*3);
+    color: var(--quarternary-color);
+    border-collapse: separate; /* Separates the rows */
+    border-spacing: 0 2px;
+}
+
+.import-table thead tr {
+    background-color: var(--secondary-color); 
+}
+
+.import-table tbody tr {
+    background-color: var(--tertiary-color); 
+    margin-top: 2px;
+    position: relative;
 }
 
 #choose-mapping-key {
@@ -902,13 +931,13 @@ td, th {
 
 @media (max-height: 1000px) {
     .import-table-container {
-        max-height: 35vh;
+        max-height: 50vh;
     }
 }
 
 @media (max-height: 600px) {
     .import-table-container {
-        max-height: 25vh;
+        max-height: 45vh;
     }
 }
 
@@ -933,12 +962,19 @@ td, th {
 }
 
 .add-excel-button:hover, .add-susandb-button:hover {
-    background-color: rgba(255, 255, 255, 0.199);
+    background-color: rgba(255, 255, 255, 0.452);
     font-weight: bolder;
+    cursor: pointer;
 }
 
 .select.excel-field-select, .select.susandb-field-select{
     width:min-content;
+    background-color: var(--secondary-color);
+    appearance: auto;
+}
+
+.select-import:hover{
+    cursor: pointer;
 }
 
 .import-table-container thead {
