@@ -4,7 +4,13 @@
 {% block content %}
 <form id="upload-form" action="/process_import_excel_file" method="POST" enctype="multipart/form-data">
     <div class="auxiliary-content auxiliary">
-        <h1>UPLOAD FILE</h1>
+        <h1 class="import-upload-title">
+            UPLOAD FILE  
+            <span class="import-info-icon-span">
+                <img class="import-info-icon" src="static/icons/icon-information.png" alt="Information">
+                <img class="import-hover-image" src="static/excel_format_warning.png" alt="Excel Format Warning">
+            </span>
+          </h1>
         <div class="details-upload">
             <div class="details-icon-container">
                 <label for="file-upload">

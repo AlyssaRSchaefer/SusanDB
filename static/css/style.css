@@ -883,6 +883,41 @@ td, th {
 
 /* IMPORT PAGE */
 
+.import-upload-title {
+    display: inline-flex; /* Allows inline elements to use flexbox */
+    align-items: center; /* Vertically aligns items in the flex container */
+}
+
+.import-info-icon-span {
+    position: relative; /* Needed for absolute positioning of hover-image */
+    display: inline-block; /* Allows width/height to be set */
+    margin-left: 10px; /* Add some space between title and icon */
+}
+
+.import-info-icon {
+    width: 0.6em; /* Make the icon smaller (adjust as needed) */
+    height: 0.6em; /* Maintain aspect ratio */
+}
+
+.import-hover-image {
+    position: absolute;
+    top: 110%; /* Position below the icon */
+    left: 0%; /* Center horizontally */
+    transform: translateX(-50%); /* Center horizontally */
+    display: none; /* Hide by default */
+    z-index: 10; /* Ensure it's on top of other elements */
+    width: 500px; /* Adjust as needed */
+    height: auto;
+    border: 5px solid var(--primary-color-highlight); /* Add a border for visual clarity */
+    background-color: white; /* Add a background color */
+    padding: 3px;
+
+}
+
+.import-info-icon-span:hover .import-hover-image {
+    display: block; /* Show on hover */
+}
+
 .fields-to-update {
     justify-content: center;
 }
