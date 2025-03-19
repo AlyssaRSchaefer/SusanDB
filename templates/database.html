@@ -20,7 +20,7 @@
                 <div class="database-controls-right">
                     {% if delete_mode %}
                         <a href="{{ url_for('database') }}"><div class="button secondary-button">EXIT DELETE MODE</div></a>
-                        <div class="button primary-button" onclick="deleteStudents()">DELETE STUDENTS</div>
+                        <div class="button primary-button" onclick="openConfirmDeletePopup()">DELETE STUDENTS</div>
                     {% else %}
                         <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
                         <a href="{{ url_for('layout') }}"><div class="button secondary-button">LAYOUT</div></a>
@@ -61,6 +61,19 @@
             <div class="primary-confirm-button confirm-button" onclick="createFilter()">CONFIRM</div>
         </div>
     </div>
+
+    {% if delete_mode %}
+    <div id="database-confirm-delete-menu" class="popup-overlay" style="display: none;">
+        <div class="popup-content">
+            <h3 class="templates-popup-header">Are you sure?</h3>
+            <div>
+                <button class="secondary-button popup-button" onclick="hideConfirmDeletePopup()">CANCEL</button>
+                <button class="primary-button popup-button" onclick="deleteStudents()">DELETE STUDENTS</button>
+            </div>
+        </div>
+      </div>
+    {% endif %}
+
 {% endblock %}
 
 {% block script %}

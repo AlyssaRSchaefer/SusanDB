@@ -178,6 +178,16 @@ function openDetailsPage(){
     window.location.href = `/details?id=${studentId}`;
 }
 
+function openConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "flex";
+}
+
+function hideConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "none";
+}
+
 function deleteStudents() {
     fetch('/delete_students_from_db', {
         method: 'POST',
@@ -195,6 +205,7 @@ function deleteStudents() {
             console.error("Error:", data.error);
             alert("Error: " + data.error);
         }
+        hideConfirmDeletePopup();
     })
     .catch(error => console.error("Fetch error:", error));
 }
