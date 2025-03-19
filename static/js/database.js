@@ -178,6 +178,16 @@ function openDetailsPage(){
     window.location.href = `/details?id=${studentId}`;
 }
 
+function openConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "flex";
+}
+
+function hideConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "none";
+}
+
 function deleteStudents() {
     fetch('/delete_students_from_db', {
         method: 'POST',
@@ -195,6 +205,7 @@ function deleteStudents() {
             console.error("Error:", data.error);
             alert("Error: " + data.error);
         }
+        hideConfirmDeletePopup();
     })
     .catch(error => console.error("Fetch error:", error));
 }
@@ -285,6 +296,11 @@ function fetchData(sort = {}, filter = [], search="") {
                 td.innerHTML = cellText;
 
                 td.ondblclick = function () {
+                    // Check if an input field already exists
+                    if (td.querySelector('input')) {
+                        return; // Prevent adding another input
+                    }
+                
                     const originalText = td.innerHTML;
                     const input = document.createElement('input');
                     input.type = 'text';
@@ -309,22 +325,20 @@ function fetchData(sort = {}, filter = [], search="") {
                 
                     input.addEventListener("input", resizeInput);
                     resizeInput(); // Initial resize based on current text
-
-                    // Save the edited value when user presses Enter
-                    input.onblur = function () {
+                
+                    // Save the edited value when user presses Enter or loses focus
+                    function saveValue() {
                         td.innerHTML = input.value;
-                        // Optionally, send the updated data to the server
                         updateCellData(row["id"], col, input.value);
-                    };
-
+                    }
+                
+                    input.onblur = saveValue;
                     input.onkeydown = function (e) {
                         if (e.key === 'Enter') {
-                            td.innerHTML = input.value;
-                            // Optionally, send the updated data to the server
-                            updateCellData(row["id"], col, input.value);
+                            saveValue();
                         }
                     };
-                };
+                };                
 
                 tr.appendChild(td);
             });

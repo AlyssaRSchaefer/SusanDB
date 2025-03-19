@@ -1,7 +1,7 @@
+student_id
 first_name
 last_name
-student_id
-address
+state
 telephone
 email
 dob
