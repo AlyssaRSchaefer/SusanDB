@@ -2,6 +2,7 @@
 let selectedExcelFields = [];
 let selectedSusanDBFields = [];
 let mappingRules = [];
+let previewUpdates = [];
 
 const dataHolder = document.getElementById('data-holder');
 const columns = JSON.parse(dataHolder.getAttribute('data-columns'));
@@ -278,7 +279,7 @@ function submitMappingData() {
     console.log(selectedSusanDBFields);
     console.log(selectedExcelFields);
 
-    fetch('/update_db_from_excel', {
+    fetch('/generate_preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -290,18 +291,86 @@ function submitMappingData() {
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            console.error("Error:", data.error);
+            alert("Error generating preview: " + data.error);
+        } else {
+            previewUpdates = data.preview
+            displayPreviewTable(data.preview);  // Call function to show updates
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        alert('An error occurred while generating preview.');
+    });
+}
+
+function displayPreviewTable(previewUpdates) {
+    let table = document.getElementById("preview-table-body");
+    table.innerHTML = "";  // Clear old preview
+
+    previewUpdates.forEach((update, studentIndex) => {
+        update.changes.forEach((change, changeIndex) => {
+            let row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${update.student_id}</td>
+                <td>${update.first_name}</td>
+                <td>${update.last_name}</td>
+                <td>
+                    <strong>${change.field}</strong><br>
+                    <span style="color: red;">Current: ${change.current_value}</span><br>
+                    <span style="color: green;">New: ${change.new_value}</span>
+                </td>
+                <td>
+                    <input type="checkbox" 
+                        class="update-checkbox" 
+                        data-student-index="${studentIndex}" 
+                        data-change-index="${changeIndex}">
+                </td>
+            `;
+
+            table.appendChild(row);
+        });
+    });
+    document.getElementById("confirm-update-section").style.display = "flex";
+    document.getElementById("map-data").style.display = "none";
+}
+
+document.getElementById("finalSubmitButton").addEventListener("click", function() {
+    let selectedUpdates = [];
+
+    document.querySelectorAll(".update-checkbox:checked").forEach(checkbox => {
+        let studentIndex = checkbox.getAttribute("data-student-index");
+        let changeIndex = checkbox.getAttribute("data-change-index");
+
+        let studentUpdate = { ...previewUpdates[studentIndex] }; // Copy student details
+        studentUpdate.changes = [previewUpdates[studentIndex].changes[changeIndex]]; // Keep only the selected change
+
+        selectedUpdates.push(studentUpdate);
+    });
+
+    if (selectedUpdates.length === 0) {
+        alert("No updates selected.");
+        return;
+    }
+
+    fetch('/update_db_from_excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: selectedUpdates })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
             alert("Error updating database: " + data.error);
         } else {
-            console.log("Success:", data.message);
-            alert(data.message); // Display success message
+            alert(data.message);
         }
     })
     .catch(error => {
         console.error('Fetch error:', error);
         alert('An error occurred while updating the database.');
     });
-}
+});
 
 function toggleSelectAll() {
     let checkboxes = document.querySelectorAll('.fields-to-update-checkbox');

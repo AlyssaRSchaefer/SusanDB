@@ -588,72 +588,122 @@ def process_import_excel_file():
         print(f'Error processing file: {str(e)}')
         return redirect(url_for('import_data'))
 
-@app.route('/update_db_from_excel', methods=['POST'])
-def update_db_from_excel():
+@app.route('/generate_preview', methods=['POST'])
+def generate_preview():
     try:
-        print("in update function")
-        # Parse JSON data from request
         data = request.get_json()
-        selected_excel_fields = data.get('selectedExcelFields', [])  # Excel fields to update from
-        selected_susandb_fields = data.get('selectedSusanDBFields', [])  # DB fields to update
-        mapping_keys = data.get('mappingRules', [])  # Mapping keys for WHERE clause
-        print(mapping_keys)
+        selected_excel_fields = data.get('selectedExcelFields', [])
+        selected_susandb_fields = data.get('selectedSusanDBFields', [])
+        mapping_keys = data.get('mappingRules', [])
 
         if not selected_excel_fields or not selected_susandb_fields:
             return jsonify({"error": "No fields selected for updating"}), 400
 
         df = pd.read_excel(EXCEL_FILE_PATH)
         db = get_db()
-        updated_rows = 0  # Track updated rows
+        cursor = db.cursor()
 
+        preview_updates = []
+
+        # For each row in Excel, determine the changes
         for _, row in df.iterrows():
-            update_values = []
             where_conditions = []
-            update_params = []
             where_params = []
 
-            # Construct SET clause for updating fields
-            for excel_field, db_field in zip(selected_excel_fields, selected_susandb_fields):
-                if not any(db_field in rule["susandb"] for rule in mapping_keys):  # Ensure it's not a mapping key
-                    if excel_field in df.columns:
-                        update_values.append(f"{db_field} = ?")
-                        update_params.append(str(row[excel_field]))  # Convert value to string
-
-            # Construct WHERE clause using mapping keys
+            # Build WHERE clause from mapping keys to identify the student
             for rule in mapping_keys:
-                excel_fields = rule.get("excel", [])  # Excel fields to concatenate
-                susandb_fields = rule.get("susandb", [])  # Corresponding DB field
-                
-                if not excel_fields or not susandb_fields:
-                    continue  # Skip invalid mappings
-                
-                # Concatenate values from Excel fields
+                excel_fields = rule.get("excel", [])
+                susandb_fields = rule.get("susandb", [])
                 concatenated_value = " ".join(str(row[col]) for col in excel_fields if col in df.columns)
                 where_conditions.append(f"{susandb_fields[0]} = ?")
                 where_params.append(concatenated_value)
 
-            # Skip if there's nothing to update or no valid WHERE clause
-            if not update_values or not where_conditions:
-                continue  
+            # Get student data from DB matching the WHERE clause
+            if not where_conditions:
+                continue
 
-            # Combine clauses into SQL query
-            query = f"UPDATE students SET {', '.join(update_values)} WHERE {' AND '.join(where_conditions)}"
-            full_params = update_params + where_params  # Ensure correct parameter order
+            query = f"SELECT student_id, first_name, last_name, {', '.join(selected_susandb_fields)} FROM students WHERE {' AND '.join(where_conditions)}"
+            cursor.execute(query, where_params)
+            student_data = cursor.fetchone()
 
-            # Debugging
-            print(f"Executing SQL Query: {query}")
-            print(f"With Parameters: {full_params}")
+            if not student_data:
+                continue
 
-            # Execute query
-            cursor = db.execute(query, full_params)
+            student_id, first_name, last_name, *current_values = student_data
+
+            # Track changes for this student
+            changes = []
+            for excel_field, db_field, current_value in zip(selected_excel_fields, selected_susandb_fields, current_values):
+                new_value = str(row[excel_field])
+                if str(current_value) != new_value:  # Only log differences
+                    changes.append({
+                        "field": db_field,
+                        "current_value": current_value,
+                        "new_value": new_value
+                    })
+
+            if changes:
+                preview_updates.append({
+                    "student_id": student_id,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "changes": changes
+                })
+
+        db.close()
+
+        return jsonify({"preview": preview_updates}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/update_db_from_excel', methods=['POST'])
+def update_db_from_excel():
+    try:
+        data = request.get_json()
+        selected_updates = data.get('updates', [])
+
+        if not selected_updates:
+            return jsonify({"error": "No updates selected"}), 400
+
+        db = get_db()
+        updated_rows = 0
+
+        # Apply only selected changes
+        for update in selected_updates:
+            student_id = update.get('student_id')
+            changes = update.get('changes', [])
+
+            # Build SET clause
+            set_clause_parts = []
+            update_params = []
+
+            for change in changes:
+                field = change.get('field')
+                new_value = change.get('new_value')
+
+                if field and new_value is not None:
+                    set_clause_parts.append(f"{field} = ?")
+                    update_params.append(str(new_value))
+
+            if not set_clause_parts:
+                continue
+
+            # Build the query
+            query = f"UPDATE students SET {', '.join(set_clause_parts)} WHERE student_id = ?"
+            update_params.append(student_id)
+
+            # Execute the update query
+            cursor = db.execute(query, update_params)
             updated_rows += cursor.rowcount
 
+        # Commit changes
         db.commit()
         db.close()
         save_db()
 
         return jsonify({
-            "message": f"Database update completed. {updated_rows} rows updated successfully."
+            "message": f"Database update completed. {updated_rows} changes applied successfully."
         }), 200
 
     except Exception as e:
