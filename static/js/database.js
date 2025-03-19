@@ -285,6 +285,11 @@ function fetchData(sort = {}, filter = [], search="") {
                 td.innerHTML = cellText;
 
                 td.ondblclick = function () {
+                    // Check if an input field already exists
+                    if (td.querySelector('input')) {
+                        return; // Prevent adding another input
+                    }
+                
                     const originalText = td.innerHTML;
                     const input = document.createElement('input');
                     input.type = 'text';
@@ -309,22 +314,20 @@ function fetchData(sort = {}, filter = [], search="") {
                 
                     input.addEventListener("input", resizeInput);
                     resizeInput(); // Initial resize based on current text
-
-                    // Save the edited value when user presses Enter
-                    input.onblur = function () {
+                
+                    // Save the edited value when user presses Enter or loses focus
+                    function saveValue() {
                         td.innerHTML = input.value;
-                        // Optionally, send the updated data to the server
                         updateCellData(row["id"], col, input.value);
-                    };
-
+                    }
+                
+                    input.onblur = saveValue;
                     input.onkeydown = function (e) {
                         if (e.key === 'Enter') {
-                            td.innerHTML = input.value;
-                            // Optionally, send the updated data to the server
-                            updateCellData(row["id"], col, input.value);
+                            saveValue();
                         }
                     };
-                };
+                };                
 
                 tr.appendChild(td);
             });
