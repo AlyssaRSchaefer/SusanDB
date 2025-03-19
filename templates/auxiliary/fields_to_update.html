@@ -1,0 +1,134 @@
+{% extends 'auxiliary.html' %}
+
+{% block title %}Fields to Update{% endblock %}
+
+{% block content %}
+<!-- THIS IS THE FIRST POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE THE FIELDS THEY WANT TO UPDATE-->
+<div class="templates-section fields-to-update" id="fields-to-update">
+    <h1>FIELDS TO UPDATE</h1>
+    <div class="templates-table-container">
+        <table class="templates-table">
+            <thead>
+                <tr>
+                    <th>
+                        <span class="checkbox-wrapper">
+                            <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll()">
+                        </span>
+                        EXCEL FIELDS
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for column in columns %}
+                <tr>
+                    <td>
+                        <span class="checkbox-wrapper">
+                            <!--the class new-template-checkbox is there to provide the same css as other pages. the fields-to-update-checkbox is there for js purposes-->
+                            <input type="checkbox" class="new-template-checkbox fields-to-update-checkbox" value="{{ column }}">
+                        </span>
+                        {{ column }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <button class="primary-button new-template-button" onclick="submitFieldsToUpdate()" 
+            style="width: 50%; margin-top: 30px; align-self: center;">
+        NEXT
+    </button>
+</div>
+
+<!-- THIS IS THE SECOND POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE THE PRIMARY KEY(S)-->
+<div id="choose-mapping-key" style="display: none; flex-direction: column; align-items: center;">
+    <h1>CHOOSE MAPPING KEY</h1>
+
+    <!-- Rules Table -->
+    <div class="rules-table-container import-table-container" style="width: 100%;">
+        <table class="rules-table import-table" style="width: 100%;">
+            <thead>
+                <tr>
+                    <th>Excel Fields</th>
+                    <th style="width: 3ch; text-align: center;"></th>
+                    <th>SusanDB Fields</th>
+                </tr>
+            </thead>
+            <tbody id="rules-body">
+                <tr style="opacity: .5;">
+                    <td>
+                        <!-- Excel Fields Side -->
+                        <div class="excel-side">
+                            <select class="excel-field-select select-import select">
+                                <option value="">Select Excel Field</option>
+                                {% for column in columns %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="add-excel-button" style="display: none;">+</button>
+                        </div>
+                    </td>
+                    <td style="width: 3ch; text-align: center;">=</td>
+                    <td>            
+                        <!-- SusanDB Fields Side -->
+                        <div class="susandb-side">
+                            <select class="susandb-field-select select-import select">
+                                <option value="">Select SusanDB Field</option>
+                                {% for column in susandb_columns %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="add-susandb-button" style="display: none;">+</button>
+                        </div>
+                    </td>
+                </tr>
+                <!-- Rules will be dynamically added here -->
+            </tbody>
+        </table>
+    </div>
+    <button class="primary-button add-rule-button text" style="margin-top: 10px; height: auto; display: none;" disabled>
+        Add Rule
+    </button>
+
+    <!-- Confirm Button -->
+    <button id="map-key-confirm-button" class="primary-button confirm-button text" onclick="submitPrimaryKeys()" 
+            style="width: 50%; margin-top: 30px; align-self: center; display: none; height:auto;">
+        NEXT
+    </button>
+</div>
+
+<!-- THIS IS THE THIRD POP-UP THAT WILL BE SHOWN. THE USER WILL CHOOSE HOW TO MAP EACH KEY-->
+<div id="map-data" style="display: none; flex-direction: column; align-items: center;">
+    <h1>MAP DATA</h1>
+    <div class="templates-table-container">
+        <table class="import-table">
+            <thead>
+                <tr>
+                    <th>
+                        EXCEL FIELDS
+                    </th>
+                    <th>
+                        CORRESPONDING SUSAN DB FIELD
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+
+    <button id="submit-mapping-data-btn" class="primary-button new-template-button" onclick="submitMappingData()" 
+            style="width: 50%; margin-top: 30px; align-self: center; display:none">
+        SUBMIT
+    </button>
+</div>
+
+<!-- NEED THIS TO PASS TO THE JS FILE-->
+<div id="data-holder" 
+     data-columns='{{ columns | tojson | safe }}' 
+     data-susandb-columns='{{ susandb_columns | tojson | safe }}'></div>
+{% endblock %}
+
+{% block script %}
+<script src="static/js/fields_to_update.js"></script>
+{% endblock %}
