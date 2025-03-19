@@ -305,7 +305,7 @@ function submitMappingData() {
 
 function displayPreviewTable(previewUpdates) {
     const tableBody = document.getElementById("preview-table-body");
-    tableBody.innerHTML = ""; // Clear previous content
+    tableBody.innerHTML = "";
 
     previewUpdates.forEach((update, studentIndex) => {
         let hasChanges = false;
@@ -317,10 +317,9 @@ function displayPreviewTable(previewUpdates) {
                 <td>
         `;
 
-        update.changes.forEach((change, changeIndex) => {
+        update.changes.forEach(change => {
             const isUnchanged = change.unchanged;
 
-            // Format "Current → New" value for better visibility
             rowContent += `<strong>${change.field}:</strong> 
                 <span style="color: ${isUnchanged ? '#aaa' : '#d9534f'}">
                     ${change.current_value}
@@ -330,20 +329,18 @@ function displayPreviewTable(previewUpdates) {
                     ${change.new_value}
                 </span><br>`;
 
-            // If any change is different, mark this row as having changes
             if (!isUnchanged) hasChanges = true;
         });
 
         rowContent += `</td>`;
 
-        // If changes exist, show a checkbox — otherwise, dim the row
         if (hasChanges) {
             rowContent += `
                 <td>
                     <input type="checkbox" class="update-checkbox" 
-                        data-student-index="${studentIndex}" 
-                        data-change-index="${changeIndex}">
-                </td>`;
+                        data-student-index="${studentIndex}">
+                </td>
+            `;
         } else {
             rowContent += `<td style="opacity: 0.7; text-align: center;">—</td>`;
         }
@@ -361,17 +358,7 @@ document.getElementById("finalSubmitButton").addEventListener("click", function(
 
     document.querySelectorAll(".update-checkbox:checked").forEach(checkbox => {
         let studentIndex = checkbox.getAttribute("data-student-index");
-        let changeIndex = checkbox.getAttribute("data-change-index");
-
-        if (!previewUpdates || !previewUpdates[studentIndex]) {
-            console.error("No preview updates available for student index:", studentIndex);
-            return;
-        }
-
-        let studentUpdate = { ...previewUpdates[studentIndex] }; // Copy student details
-        studentUpdate.changes = [previewUpdates[studentIndex].changes[changeIndex]]; // Keep only the selected change
-
-        selectedUpdates.push(studentUpdate);
+        selectedUpdates.push(previewUpdates[studentIndex]); // Add the entire student update
     });
 
     if (selectedUpdates.length === 0) {
@@ -390,6 +377,7 @@ document.getElementById("finalSubmitButton").addEventListener("click", function(
             alert("Error updating database: " + data.error);
         } else {
             alert(data.message);
+            window.location.href = "/database";
         }
     })
     .catch(error => {
@@ -397,7 +385,6 @@ document.getElementById("finalSubmitButton").addEventListener("click", function(
         alert('An error occurred while updating the database.');
     });
 });
-
 
 function toggleSelectAll() {
     let checkboxes = document.querySelectorAll('.fields-to-update-checkbox');
