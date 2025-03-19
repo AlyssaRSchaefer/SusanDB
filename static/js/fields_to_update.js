@@ -304,33 +304,54 @@ function submitMappingData() {
 }
 
 function displayPreviewTable(previewUpdates) {
-    let table = document.getElementById("preview-table-body");
-    table.innerHTML = "";  // Clear old preview
+    const tableBody = document.getElementById("preview-table-body");
+    tableBody.innerHTML = ""; // Clear previous content
 
     previewUpdates.forEach((update, studentIndex) => {
-        update.changes.forEach((change, changeIndex) => {
-            let row = document.createElement("tr");
-
-            row.innerHTML = `
+        let hasChanges = false;
+        let rowContent = `
+            <tr>
                 <td>${update.student_id}</td>
                 <td>${update.first_name}</td>
                 <td>${update.last_name}</td>
                 <td>
-                    <strong>${change.field}</strong><br>
-                    <span style="color: red;">Current: ${change.current_value}</span><br>
-                    <span style="color: green;">New: ${change.new_value}</span>
-                </td>
+        `;
+
+        update.changes.forEach((change, changeIndex) => {
+            const isUnchanged = change.unchanged;
+
+            // Format "Current → New" value for better visibility
+            rowContent += `<strong>${change.field}:</strong> 
+                <span style="color: ${isUnchanged ? '#aaa' : '#d9534f'}">
+                    ${change.current_value}
+                </span>
+                <strong> → </strong> 
+                <span style="color: ${isUnchanged ? '#aaa' : '#5cb85c'}">
+                    ${change.new_value}
+                </span><br>`;
+
+            // If any change is different, mark this row as having changes
+            if (!isUnchanged) hasChanges = true;
+        });
+
+        rowContent += `</td>`;
+
+        // If changes exist, show a checkbox — otherwise, dim the row
+        if (hasChanges) {
+            rowContent += `
                 <td>
-                    <input type="checkbox" 
-                        class="update-checkbox" 
+                    <input type="checkbox" class="update-checkbox" 
                         data-student-index="${studentIndex}" 
                         data-change-index="${changeIndex}">
-                </td>
-            `;
+                </td>`;
+        } else {
+            rowContent += `<td style="opacity: 0.7; text-align: center;">—</td>`;
+        }
 
-            table.appendChild(row);
-        });
+        rowContent += `</tr>`;
+        tableBody.innerHTML += rowContent;
     });
+
     document.getElementById("confirm-update-section").style.display = "flex";
     document.getElementById("map-data").style.display = "none";
 }
@@ -341,6 +362,11 @@ document.getElementById("finalSubmitButton").addEventListener("click", function(
     document.querySelectorAll(".update-checkbox:checked").forEach(checkbox => {
         let studentIndex = checkbox.getAttribute("data-student-index");
         let changeIndex = checkbox.getAttribute("data-change-index");
+
+        if (!previewUpdates || !previewUpdates[studentIndex]) {
+            console.error("No preview updates available for student index:", studentIndex);
+            return;
+        }
 
         let studentUpdate = { ...previewUpdates[studentIndex] }; // Copy student details
         studentUpdate.changes = [previewUpdates[studentIndex].changes[changeIndex]]; // Keep only the selected change
@@ -371,6 +397,7 @@ document.getElementById("finalSubmitButton").addEventListener("click", function(
         alert('An error occurred while updating the database.');
     });
 });
+
 
 function toggleSelectAll() {
     let checkboxes = document.querySelectorAll('.fields-to-update-checkbox');

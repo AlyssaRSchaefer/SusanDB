@@ -591,6 +591,7 @@ def process_import_excel_file():
 @app.route('/generate_preview', methods=['POST'])
 def generate_preview():
     try:
+        # Parse JSON data from the request
         data = request.get_json()
         selected_excel_fields = data.get('selectedExcelFields', [])
         selected_susandb_fields = data.get('selectedSusanDBFields', [])
@@ -599,13 +600,14 @@ def generate_preview():
         if not selected_excel_fields or not selected_susandb_fields:
             return jsonify({"error": "No fields selected for updating"}), 400
 
+        # Load Excel data and connect to the database
         df = pd.read_excel(EXCEL_FILE_PATH)
         db = get_db()
         cursor = db.cursor()
 
         preview_updates = []
 
-        # For each row in Excel, determine the changes
+        # Loop through each row in the Excel file
         for _, row in df.iterrows():
             where_conditions = []
             where_params = []
@@ -618,44 +620,52 @@ def generate_preview():
                 where_conditions.append(f"{susandb_fields[0]} = ?")
                 where_params.append(concatenated_value)
 
-            # Get student data from DB matching the WHERE clause
+            # If no valid WHERE conditions, skip this row
             if not where_conditions:
                 continue
 
+            # Fetch student record matching the WHERE clause
             query = f"SELECT student_id, first_name, last_name, {', '.join(selected_susandb_fields)} FROM students WHERE {' AND '.join(where_conditions)}"
             cursor.execute(query, where_params)
             student_data = cursor.fetchone()
 
+            # Skip if no matching student is found
             if not student_data:
                 continue
 
+            # Extract student details and current DB values
             student_id, first_name, last_name, *current_values = student_data
 
-            # Track changes for this student
+            # Track all changes (differences and unchanged)
             changes = []
             for excel_field, db_field, current_value in zip(selected_excel_fields, selected_susandb_fields, current_values):
                 new_value = str(row[excel_field])
-                if str(current_value) != new_value:  # Only log differences
-                    changes.append({
-                        "field": db_field,
-                        "current_value": current_value,
-                        "new_value": new_value
-                    })
 
-            if changes:
-                preview_updates.append({
-                    "student_id": student_id,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "changes": changes
+                # Include both changes and unchanged fields
+                changes.append({
+                    "field": db_field,
+                    "current_value": str(current_value),
+                    "new_value": new_value,
+                    "unchanged": str(current_value) == new_value  # Mark unchanged rows
                 })
 
+            # Append the full student update entry (even if no actual changes)
+            preview_updates.append({
+                "student_id": student_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "changes": changes
+            })
+
+        # Close the DB connection
         db.close()
 
+        # Return all updates, with unchanged fields labeled
         return jsonify({"preview": preview_updates}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
     
 @app.route('/update_db_from_excel', methods=['POST'])
 def update_db_from_excel():
