@@ -249,7 +249,7 @@ function fetchColumns() {
 }
 
 /* LOGIC TO FETCH TABLE DATA */
-function fetchData(sort = { first_name: 'ASC' }, filter = [], search="") {
+function fetchData(sort = {}, filter = [], search="") {
     const table = document.getElementById('database-body');
     studentIDs = [];
 
