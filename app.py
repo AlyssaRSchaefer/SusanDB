@@ -591,11 +591,13 @@ def process_import_excel_file():
 @app.route('/update_db_from_excel', methods=['POST'])
 def update_db_from_excel():
     try:
+        print("in update function")
         # Parse JSON data from request
         data = request.get_json()
         selected_excel_fields = data.get('selectedExcelFields', [])  # Excel fields to update from
         selected_susandb_fields = data.get('selectedSusanDBFields', [])  # DB fields to update
-        mapping_keys = data.get('mappingKeys', [])  # Mapping keys for WHERE clause
+        mapping_keys = data.get('mappingRules', [])  # Mapping keys for WHERE clause
+        print(mapping_keys)
 
         if not selected_excel_fields or not selected_susandb_fields:
             return jsonify({"error": "No fields selected for updating"}), 400
