@@ -41,6 +41,9 @@ SHARED_FOLDER_URL = os.getenv("SHARED_FOLDER_URL")
 EXCEL_UPLOAD_FOLDER = 'uploads'
 app.config['EXCEL_UPLOAD_FOLDER'] = EXCEL_UPLOAD_FOLDER
 EXCEL_FILE_PATH = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], "imported_data.xlsx")
+EXCEL_UPLOAD_FOLDER = 'uploads'
+app.config['EXCEL_UPLOAD_FOLDER'] = EXCEL_UPLOAD_FOLDER
+EXCEL_FILE_PATH = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], "imported_data.xlsx")
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
 global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
@@ -548,6 +551,176 @@ def delete_template_api():
         return {"message": "Template deleted successfully."}, 200
     else:
         return {"error": "Error deleting the template. Please try again."}, 500
+
+@app.route('/process_import_excel_file', methods=['POST'])
+def process_import_excel_file():
+    if 'file' not in request.files:
+        print('No file part')
+        return redirect(url_for('import_data'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        print('No selected file')
+        return redirect(url_for('import_data'))
+
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        print('Invalid file type')
+        return redirect(url_for('import_data'))
+
+    try:
+         # Rename the file 
+        new_filename = "imported_data.xlsx" 
+        filepath = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], new_filename)
+
+        # Save the file, replacing any existing one
+        file.save(filepath)
+
+        # Read the Excel file and extract field names
+        df = pd.read_excel(filepath)
+
+        # Extract field names from the first row (column headers)
+        field_names = df.columns.tolist()
+
+        susandb_columns = json.loads(get_all_fields().data)
+
+        # Pass data to the success template
+        return render_template('auxiliary/fields_to_update.html', susandb_columns=susandb_columns, columns=field_names, back_link="/import")
+
+    except Exception as e:
+        print(f'Error processing file: {str(e)}')
+        return redirect(url_for('import_data'))
+
+@app.route('/generate_preview', methods=['POST'])
+def generate_preview():
+    try:
+        # Parse JSON data from the request
+        data = request.get_json()
+        selected_excel_fields = data.get('selectedExcelFields', [])
+        selected_susandb_fields = data.get('selectedSusanDBFields', [])
+        mapping_keys = data.get('mappingRules', [])
+
+        if not selected_excel_fields or not selected_susandb_fields:
+            return jsonify({"error": "No fields selected for updating"}), 400
+
+        # Load Excel data and connect to the database
+        df = pd.read_excel(EXCEL_FILE_PATH)
+        db = get_db()
+        cursor = db.cursor()
+
+        preview_updates = []
+
+        # Loop through each row in the Excel file
+        for _, row in df.iterrows():
+            where_conditions = []
+            where_params = []
+
+            # Build WHERE clause from mapping keys to identify the student
+            for rule in mapping_keys:
+                excel_fields = rule.get("excel", [])
+                susandb_fields = rule.get("susandb", [])
+                concatenated_value = " ".join(str(row[col]) for col in excel_fields if col in df.columns)
+                where_conditions.append(f"{susandb_fields[0]} = ?")
+                where_params.append(concatenated_value)
+
+            # If no valid WHERE conditions, skip this row
+            if not where_conditions:
+                continue
+
+            # Fetch student record matching the WHERE clause
+            query = f"SELECT student_id, first_name, last_name, {', '.join(selected_susandb_fields)} FROM students WHERE {' AND '.join(where_conditions)}"
+            cursor.execute(query, where_params)
+            student_data = cursor.fetchone()
+
+            # Skip if no matching student is found
+            if not student_data:
+                continue
+
+            # Extract student details and current DB values
+            student_id, first_name, last_name, *current_values = student_data
+
+            # Track all changes (differences and unchanged)
+            changes = []
+            for excel_field, db_field, current_value in zip(selected_excel_fields, selected_susandb_fields, current_values):
+                new_value = str(row[excel_field])
+
+                # Include both changes and unchanged fields
+                changes.append({
+                    "field": db_field,
+                    "current_value": str(current_value),
+                    "new_value": new_value,
+                    "unchanged": str(current_value) == new_value  # Mark unchanged rows
+                })
+
+            # Append the full student update entry (even if no actual changes)
+            preview_updates.append({
+                "student_id": student_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "changes": changes
+            })
+
+        # Close the DB connection
+        db.close()
+
+        # Return all updates, with unchanged fields labeled
+        return jsonify({"preview": preview_updates}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    
+@app.route('/update_db_from_excel', methods=['POST'])
+def update_db_from_excel():
+    try:
+        data = request.get_json()
+        selected_updates = data.get('updates', [])
+
+        if not selected_updates:
+            return jsonify({"error": "No updates selected"}), 400
+
+        db = get_db()
+        updated_rows = 0
+
+        # Apply only selected changes
+        for update in selected_updates:
+            student_id = update.get('student_id')
+            changes = update.get('changes', [])
+
+            # Build SET clause
+            set_clause_parts = []
+            update_params = []
+
+            for change in changes:
+                field = change.get('field')
+                new_value = change.get('new_value')
+
+                if field and new_value is not None:
+                    set_clause_parts.append(f"{field} = ?")
+                    update_params.append(str(new_value))
+
+            if not set_clause_parts:
+                continue
+
+            # Build the query
+            query = f"UPDATE students SET {', '.join(set_clause_parts)} WHERE student_id = ?"
+            update_params.append(student_id)
+
+            # Execute the update query
+            cursor = db.execute(query, update_params)
+            updated_rows += cursor.rowcount
+
+        # Commit changes
+        db.commit()
+        db.close()
+        save_db()
+
+        return jsonify({
+            "message": f"Database update completed. {updated_rows} changes applied successfully."
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/process_import_excel_file', methods=['POST'])
 def process_import_excel_file():

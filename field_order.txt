@@ -7,3 +7,4 @@ email
 dob
 gender
 ethnicity
+gpa

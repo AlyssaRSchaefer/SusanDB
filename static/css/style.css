@@ -16,6 +16,7 @@
 
     /* Navigation Bar Height */
     --navbar-height: 60px;
+    --title-bar-height: 30px;
 }
 
 /* COLOR SCHEMES*/
@@ -270,6 +271,7 @@ a {
     align-items: center;
     background-color: white;
     justify-content: right;
+    height: var(--title-bar-height)
 }
 
 .title-bar-buttons li {
@@ -304,7 +306,7 @@ a {
     align-items: center;
     justify-content: center;
     background-color: var(--secondary-color-highlight);
-    min-height: calc(100vh - var(--navbar-height));
+    min-height: calc(100vh - var(--navbar-height) - var(--title-bar-height));
 }
 
 .auxiliary h1, .database-heading, .admin h1 { 
@@ -635,6 +637,8 @@ td, th {
     align-items: center;
     justify-content: center;
     height: 30vh;
+    flex-direction: column;
+    gap:10px;
 }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
@@ -878,9 +882,143 @@ td, th {
 }
 
 /* IMPORT PAGE */
-.import h1 {
-    color: blue;
+
+.import-upload-title {
+    display: inline-flex; /* Allows inline elements to use flexbox */
+    align-items: center; /* Vertically aligns items in the flex container */
 }
+
+.import-info-icon-span {
+    position: relative; /* Needed for absolute positioning of hover-image */
+    display: inline-block; /* Allows width/height to be set */
+    margin-left: 10px; /* Add some space between title and icon */
+}
+
+.import-info-icon {
+    width: 0.6em; /* Make the icon smaller (adjust as needed) */
+    height: 0.6em; /* Maintain aspect ratio */
+}
+
+.import-hover-image {
+    position: absolute;
+    top: 110%; /* Position below the icon */
+    left: 0%; /* Center horizontally */
+    transform: translateX(-50%); /* Center horizontally */
+    display: none; /* Hide by default */
+    z-index: 10; /* Ensure it's on top of other elements */
+    width: 500px; /* Adjust as needed */
+    height: auto;
+    border: 5px solid var(--primary-color-highlight); /* Add a border for visual clarity */
+    background-color: white; /* Add a background color */
+    padding: 3px;
+
+}
+
+.import-info-icon-span:hover .import-hover-image {
+    display: block; /* Show on hover */
+}
+
+.fields-to-update {
+    justify-content: center;
+}
+
+.susandb-map-select.unselected {
+    background-color: var(--primary-color-highlight);
+    box-shadow: 0 0 15px var(--primary-color-highlight);
+    color: white;
+    appearance: auto;
+}
+
+.susandb-map-select.import-selected {
+    border: 2px solid var(--primary-color-highlight);
+    appearance: auto;
+}
+
+.import-tables-overall-container{
+    width:calc(100vw - var(--horizontal-margin)*3);
+    display: flex; 
+    justify-content: space-between; 
+    flex-direction: row;
+    min-height: fit-content;
+}
+
+.import-table {
+    width:calc(100vw - var(--horizontal-margin)*3);
+    color: var(--quarternary-color);
+    border-collapse: separate; /* Separates the rows */
+    border-spacing: 0 2px;
+}
+
+.import-table thead tr {
+    background-color: var(--secondary-color); 
+}
+
+.import-table tbody tr {
+    background-color: var(--tertiary-color); 
+    margin-top: 2px;
+    position: relative;
+}
+
+#choose-mapping-key {
+    font-family: var(--font-secondary);
+}
+
+
+@media (max-height: 1000px) {
+    .import-table-container {
+        max-height: 50vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .import-table-container {
+        max-height: 45vh;
+    }
+}
+
+@media (max-height: 400px) {
+    .import-table-container {
+        max-height: 200px;
+    }
+}
+
+.import-table-container {
+    overflow-y: auto; /* Enables scrolling */
+    width: 100%; /* Ensures it takes up full width */
+    position: relative;
+}
+
+.add-excel-button, .add-susandb-button {
+    background-color: rgba(255, 255, 255, 0);
+    font-weight: bold;
+    font-family: var(--font-primary);
+    color: var(--primary-color-highlight);
+    border: none;
+}
+
+.add-excel-button:hover, .add-susandb-button:hover {
+    background-color: rgba(255, 255, 255, 0.452);
+    font-weight: bolder;
+    cursor: pointer;
+}
+
+.select.excel-field-select, .select.susandb-field-select{
+    width:min-content;
+    background-color: var(--secondary-color);
+    appearance: auto;
+}
+
+.select-import:hover{
+    cursor: pointer;
+}
+
+.import-table-container thead {
+    position: sticky;
+    top: 0;
+    background-color: var(--secondary-color); /* Adjust as needed */
+    z-index: 2;
+}
+
 
 /* NEW TEMPLATE PAGE */
 .new-template-input {
