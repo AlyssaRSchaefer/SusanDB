@@ -343,7 +343,7 @@ def generate_pdf(data, fields):
         pdf.set_font("Times", style="B", size=16)
 
         # Find the index where "name" appears in fields (case-insensitive)
-        name_index = next((i for i, field in enumerate(fields) if "name" in field.lower()), None)
+        name_index = None #next((i for i, field in enumerate(fields) if "name" in field.lower()), None)
 
         if name_index is not None:  # If "name" is found in fields
             title = f"Student Report - {student[name_index]}"

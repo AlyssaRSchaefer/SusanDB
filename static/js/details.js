@@ -39,8 +39,8 @@ function fetchStudentById(studentId) {
     .then(response => response.json())
     .then(data => {
 
-        if (data.name) {
-            heading.textContent = data.name;
+        if (data.first_name && data.last_name) {
+            heading.textContent = data.first_name + " " + data.last_name;
         } else {
             heading.textContent = "Student Details"; // Fallback text if 'name' is missing
         }

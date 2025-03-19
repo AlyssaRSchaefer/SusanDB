@@ -1,7 +1,9 @@
-name
+first_name
+last_name
+student_id
+address
+telephone
 email
-age
-favorite_subject
-grade
-extracurricular
-gpa
+dob
+gender
+ethnicity
