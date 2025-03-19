@@ -4,7 +4,7 @@ import msal
 import sqlite3
 import webview
 import threading
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, flash
 import secrets
 import tempfile
 from openpyxl import load_workbook
@@ -16,9 +16,8 @@ import os
 import json
 from datetime import datetime
 import time
-import requests
-import urllib.parse
-
+import pandas as pd
+from werkzeug.utils import secure_filename
 
 from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
@@ -38,7 +37,10 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
 REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
 FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
-
+SHARED_FOLDER_URL = os.getenv("SHARED_FOLDER_URL")
+EXCEL_UPLOAD_FOLDER = 'uploads'
+app.config['EXCEL_UPLOAD_FOLDER'] = EXCEL_UPLOAD_FOLDER
+EXCEL_FILE_PATH = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], "imported_data.xlsx")
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
 global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
@@ -54,6 +56,7 @@ def run_at_login():
     session["name"] = user_data.get("displayName", "Unknown User")
     session["id"] = user_data.get("id")
     session["color_scheme"] = get_color_scheme(session["id"])
+    
     global_last_update_time = time.time()
 
 #########################################################################################
@@ -546,6 +549,153 @@ def delete_template_api():
     else:
         return {"error": "Error deleting the template. Please try again."}, 500
 
+@app.route('/process_import_excel_file', methods=['POST'])
+def process_import_excel_file():
+    if 'file' not in request.files:
+        print('No file part')
+        return redirect(url_for('import_data'))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        print('No selected file')
+        return redirect(url_for('import_data'))
+
+    if not (file.filename.endswith('.xlsx') or file.filename.endswith('.xls')):
+        print('Invalid file type')
+        return redirect(url_for('import_data'))
+
+    try:
+         # Rename the file 
+        new_filename = "imported_data.xlsx" 
+        filepath = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], new_filename)
+
+        # Save the file, replacing any existing one
+        file.save(filepath)
+
+        # Read the Excel file and extract field names
+        df = pd.read_excel(filepath)
+
+        # Extract field names from the first row (column headers)
+        field_names = df.columns.tolist()
+
+        susandb_columns = json.loads(get_all_fields().data)
+
+        # Pass data to the success template
+        return render_template('auxiliary/fields_to_update.html', susandb_columns=susandb_columns, columns=field_names, back_link="/import")
+
+    except Exception as e:
+        print(f'Error processing file: {str(e)}')
+        return redirect(url_for('import_data'))
+
+@app.route('/upload_student_files', methods=['GET', 'POST'])
+def upload_student_files():
+    access_token = session["access_token"] 
+    
+    if 'file' not in request.files:
+        flash('No file part')
+        return redirect(request.url)
+
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.url)
+    filename = secure_filename(file.filename)
+ 
+    student_id = request.form.get('student_id') 
+
+    if not student_id:
+        flash('Student ID is required')
+        return redirect(request.url)
+
+    #check if the student folder exists in OneDrive
+    folder_id = get_student_folder_id(access_token, student_id)
+    
+    if not folder_id:  #f doesn't exist, create it
+        folder_id = create_student_folder(access_token, student_id)
+    
+    #upload the file to the student folder
+    file_path = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], filename)
+    file.save(file_path)  #save the file temporarily
+
+    success, message = upload_new_file_no_duplicate(access_token, file_path, filename, folder_id)
+
+    if not success:
+        flash(message)
+        return redirect(request.url)
+
+    flash("File uploaded successfully.")
+    return render_template("auxiliary/success.html", backlink="/details")
+
+@app.route('/update_db_from_excel', methods=['POST'])
+def update_db_from_excel():
+    try:
+        # Parse JSON data from request
+        data = request.get_json()
+        selected_excel_fields = data.get('selectedExcelFields', [])  # Excel fields to update from
+        selected_susandb_fields = data.get('selectedSusanDBFields', [])  # DB fields to update
+        mapping_keys = data.get('mappingKeys', [])  # Mapping keys for WHERE clause
+
+        if not selected_excel_fields or not selected_susandb_fields:
+            return jsonify({"error": "No fields selected for updating"}), 400
+
+        df = pd.read_excel(EXCEL_FILE_PATH)
+        db = get_db()
+        updated_rows = 0  # Track updated rows
+
+        for _, row in df.iterrows():
+            update_values = []
+            where_conditions = []
+            update_params = []
+            where_params = []
+
+            # Construct SET clause for updating fields
+            for excel_field, db_field in zip(selected_excel_fields, selected_susandb_fields):
+                if not any(db_field in rule["susandb"] for rule in mapping_keys):  # Ensure it's not a mapping key
+                    if excel_field in df.columns:
+                        update_values.append(f"{db_field} = ?")
+                        update_params.append(str(row[excel_field]))  # Convert value to string
+
+            # Construct WHERE clause using mapping keys
+            for rule in mapping_keys:
+                excel_fields = rule.get("excel", [])  # Excel fields to concatenate
+                susandb_fields = rule.get("susandb", [])  # Corresponding DB field
+                
+                if not excel_fields or not susandb_fields:
+                    continue  # Skip invalid mappings
+                
+                # Concatenate values from Excel fields
+                concatenated_value = " ".join(str(row[col]) for col in excel_fields if col in df.columns)
+                where_conditions.append(f"{susandb_fields[0]} = ?")
+                where_params.append(concatenated_value)
+
+            # Skip if there's nothing to update or no valid WHERE clause
+            if not update_values or not where_conditions:
+                continue  
+
+            # Combine clauses into SQL query
+            query = f"UPDATE students SET {', '.join(update_values)} WHERE {' AND '.join(where_conditions)}"
+            full_params = update_params + where_params  # Ensure correct parameter order
+
+            # Debugging
+            print(f"Executing SQL Query: {query}")
+            print(f"With Parameters: {full_params}")
+
+            # Execute query
+            cursor = db.execute(query, full_params)
+            updated_rows += cursor.rowcount
+
+        db.commit()
+        db.close()
+        save_db()
+
+        return jsonify({
+            "message": f"Database update completed. {updated_rows} rows updated successfully."
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/layout')
 def layout():
     return render_template('auxiliary/layout.html', 
@@ -562,8 +712,9 @@ def details():
 def details_upload():
     id = request.args.get('id')
     return render_template('auxiliary/details_upload.html',
-        heading="Upload File",
-        back_link=f"/details?id={id}")
+                           heading="Upload File",
+                           back_link=f"/details?id={id}")
+
 
 @app.route('/store-selected-students', methods=['POST'])
 def store_selected_students():
