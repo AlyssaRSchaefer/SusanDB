@@ -1,5 +1,6 @@
 // Variable to hold the selected fields
-let selectedFields = [];
+let selectedExcelFields = [];
+let selectedSusanDBFields = [];
 let mappingRules = [];
 
 const dataHolder = document.getElementById('data-holder');
@@ -14,9 +15,9 @@ function submitFieldsToUpdate() {
     const checkboxes = document.querySelectorAll('.fields-to-update-checkbox:checked');
     
     // Store the values of the selected checkboxes into the array
-    selectedFields = Array.from(checkboxes).map(checkbox => checkbox.value);
+    selectedExcelFields = Array.from(checkboxes).map(checkbox => checkbox.value);
     
-    if (selectedFields.length === 0) {
+    if (selectedExcelFields.length === 0) {
         alert('Please select at least one field!');
         return;
     }
@@ -210,12 +211,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // STEP 3
 // Map data
-// Function to fill the map-data table with selectedFields and dropdowns
+// Function to fill the map-data table with selectedExcelFields and dropdowns
 function fillMapDataTable() {
     const tableBody = document.querySelector('#map-data .import-table tbody');
     tableBody.innerHTML = ''; // Clear existing rows
 
-    selectedFields.forEach(field => {
+    selectedExcelFields.forEach(field => {
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
             <td>${field}</td>
@@ -264,7 +265,42 @@ function checkSubmitButton() {
 }
 
 function submitMappingData() {
-    // implement!!
+    selectedSusanDBFields = []; // Reset before updating
+
+    const selectElements = document.querySelectorAll("#map-data tbody select");
+
+    selectElements.forEach(select => {
+        if (select.value) {
+            selectedSusanDBFields.push(select.value);
+        }
+    });
+
+    console.log(selectedSusanDBFields);
+    console.log(selectedExcelFields);
+
+    fetch('/update_db_from_excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            selectedExcelFields: selectedExcelFields,
+            selectedSusanDBFields: selectedSusanDBFields,
+            mappingRules: mappingRules
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error("Error:", data.error);
+            alert("Error updating database: " + data.error);
+        } else {
+            console.log("Success:", data.message);
+            alert(data.message); // Display success message
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        alert('An error occurred while updating the database.');
+    });
 }
 
 function toggleSelectAll() {
