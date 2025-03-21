@@ -1,13 +1,12 @@
 {% extends 'auxiliary.html' %}
 
-{% block title %}Details Page{% endblock %}
+{% block title %}Details upload Page{% endblock %}
 
 {% block content %}
 
 <form id="upload-form" action="/upload_student_files" method="POST" enctype="multipart/form-data">
     <div class="auxiliary-content auxiliary">
-        <h1 class="import-upload-title">
-            UPLOAD FILE  
+        <h1 class="import-upload-title">  
             <span class="import-info-icon-span">
                 <img class="import-info-icon" src="static/icons/icon-information.png" alt="Information">
                 <img class="import-hover-image" src="static/excel_format_warning.png" alt="Excel Format Warning">
@@ -18,10 +17,10 @@
                 <label for="file-upload">
                     <img src="static/icons/icon-upload.png" alt="upload file icon" style="cursor: pointer;">
                 </label>
-                <input type="file" id="file-upload" name="file" style="display: none;" accept=".xlsx,.xls">
+                <input type="file" id="file-upload" name="file" style="display: none;">
                 <div id="file-name" class="file-name-placeholder">No file selected</div>
             </div>
-            <button type="submit" class="primary-confirm-button confirm-button text" style="height: auto;">CONFIRM</button>
+            <button type="submit" class="primary-confirm-button confirm-button text" style="height: auto;" onclick="uploadToOnedrive()">CONFIRM</button>
         </div>
     </div>
 </form>
