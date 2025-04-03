@@ -4,6 +4,7 @@ const table = document.getElementById("details-table");
 const heading = document.querySelector("h1");
 const filesContainer = document.getElementById("details-file-icons");
 const noFilesIndicator = document.getElementById("details-no-files-indicator");
+const loadingSpinner = document.getElementById("details-loading-spinner");
 
 function openDetailsUploadPage(){
     const studentId = encodeURIComponent(id);
@@ -35,6 +36,10 @@ function addFileDiv(fileName){
     div.classList = "details-file";
     div.innerHTML = '<div class="details-file-icon"><img src="static/icons/icon-file.png" alt="File"></div><div class="details-file-name">' + fileName + '</div'
     filesContainer.appendChild(div);
+
+    setTimeout(() => {
+        div.classList.add("appear");
+    }, 10);
 }
 
 function fetchStudentById(studentId) {
@@ -133,12 +138,14 @@ function fetchStudentFiles(studentId) {
         
         if (data.files.length === 0){
             noFilesIndicator.style.display = "block";
+            loadingSpinner.style.display = "none";
             return;
         }
 
         data.files.forEach(fileName => {
             addFileDiv(fileName);
         });
+        loadingSpinner.style.display = "none";
     })
     .catch(error => {
         console.error("Error:", error);

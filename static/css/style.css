@@ -619,6 +619,14 @@ td, th {
     width: 100%;
     height: auto;
     min-width: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.details-file.appear {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .details-file-icon {
@@ -653,6 +661,25 @@ td, th {
     flex-direction: column;
     gap:10px;
 }
+
+.details-loading {
+    margin-top: 10px;
+    width: 30px;
+    height: 30px;
+    border: 4px solid var(--tertiary-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
 .templates-body {
