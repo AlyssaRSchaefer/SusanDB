@@ -3,6 +3,7 @@ const id = urlParams.get('id');
 const table = document.getElementById("details-table");
 const heading = document.querySelector("h1");
 const filesContainer = document.getElementById("details-file-icons");
+const noFilesIndicator = document.getElementById("details-no-files-indicator");
 
 function openDetailsUploadPage(){
     const studentId = encodeURIComponent(id);
@@ -129,6 +130,11 @@ function fetchStudentFiles(studentId) {
         }
 
         filesContainer.innerHTML = ""; // Clear previous files before adding new ones
+        
+        if (data.files.length === 0){
+            noFilesIndicator.style.display = "block";
+            return;
+        }
 
         data.files.forEach(fileName => {
             addFileDiv(fileName);

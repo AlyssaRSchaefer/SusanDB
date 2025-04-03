@@ -567,6 +567,10 @@ td, th {
     width: 100%;
 }
 
+.details-table td {
+    white-space: normal;
+}
+
 .details-table tbody tr {
     background-color: var(--tertiary-color);
     margin-bottom: 2px;
@@ -586,8 +590,17 @@ td, th {
 }
 
 .details-files-header {
-    color: var(--quarternary-color);
     background-color: var(--tertiary-color);
+}
+
+.details-no-files-indicator {
+    background-color: var(--secondary-color);
+    font-style: italic;
+    display: none;
+}
+
+.details-files-header, .details-no-files-indicator {
+    color: var(--quarternary-color);
     text-align: center;
     padding-top: 10px;
     padding-bottom: 10px;
