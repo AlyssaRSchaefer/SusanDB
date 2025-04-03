@@ -2,6 +2,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const id = urlParams.get('id');
 const table = document.getElementById("details-table");
 const heading = document.querySelector("h1");
+const filesContainer = document.getElementById("details-file-icons");
 
 function openDetailsUploadPage(){
     const studentId = encodeURIComponent(id);
@@ -26,6 +27,13 @@ function updateCellData(id, field, newValue) {
         console.error('Error:', error);
         alert('There was an issue updating the data.');
     });
+}
+
+function addFileDiv(fileName){
+    const div = document.createElement("div");
+    div.classList = "details-file";
+    div.innerHTML = '<div class="details-file-icon"><img src="static/icons/icon-file.png" alt="File"></div><div class="details-file-name">' + fileName + '</div'
+    filesContainer.appendChild(div);
 }
 
 function fetchStudentById(studentId) {
@@ -105,6 +113,33 @@ function fetchStudentById(studentId) {
     .catch(error => console.error('Error:', error));    
 }
 
+function fetchStudentFiles(studentId) {
+    fetch('/get_student_files', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ student_id: studentId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error("Error fetching files:", data.error);
+            return;
+        }
+
+        filesContainer.innerHTML = ""; // Clear previous files before adding new ones
+
+        data.files.forEach(fileName => {
+            addFileDiv(fileName);
+        });
+    })
+    .catch(error => {
+        console.error("Error:", error);
+    });
+}
+
 window.onload = () => {
     fetchStudentById(id);
+    fetchStudentFiles(id);
 };
