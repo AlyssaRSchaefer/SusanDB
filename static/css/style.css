@@ -6,6 +6,7 @@
     --secondary-color-highlight: #F2F2F2;
     --tertiary-color: #ffffff; /* white */
     --quarternary-color: #747474; /* dark gray */
+    --secondary-color-transparent: #E8E8E8CC;
 
     /* Fonts */
     --font-primary: "Courier New", monospace; /* For titles */
@@ -171,6 +172,29 @@ a {
     position: relative; /* Needed for tooltip positioning */
     pointer-events: auto;
 }
+
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--secondary-color-transparent);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    margin-top: 10px;
+    width: 100px;
+    height: 100px;
+    border: 10px solid var(--tertiary-color);
+    border-top: 10px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
 
 /* Tooltip styling */
 .button.primary-button.disabled-button::after {

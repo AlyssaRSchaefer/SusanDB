@@ -94,6 +94,7 @@ function hideConfirmDeletePopup() {
 }
 
 function deleteFile() {
+    loading.style.display = "flex";
     fetch('/delete_student_file', {
         method: 'POST',
         headers: {
@@ -106,9 +107,12 @@ function deleteFile() {
         if (data.error) {
             alert("Error: " + data.error);
         } else {
-            alert("File deleted successfully!");
-            // Optionally, refresh the file list or remove the file icon from the UI
-            fetchStudentFiles(id); // Refresh the file list
+            document.getElementById("details-file-icons").innerHTML = "";
+            fetchStudentFiles(id);
+            selectedFile = "";
+            closeFileOptionsMenu();
+            hideConfirmDeletePopup();
+            loading.style.display = "none";
         }
     })
     .catch(error => {
@@ -222,6 +226,7 @@ function fetchStudentById(studentId) {
 }
 
 function fetchStudentFiles(studentId) {
+    loadingSpinner.style.display = "flex";
     fetch('/get_student_files', {
         method: 'POST',
         headers: {

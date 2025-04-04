@@ -5,23 +5,24 @@ function generateErrorMessage(msg){
 }
 
 function addNewField() {
-
+    loading.style.display = "flex";
     let name = document.getElementById("add-field-name").value.replaceAll(" ", "_");
     let defaultValue = document.getElementById("add-field-default").value;
     let addToLayout = document.getElementById("add-field-layout").checked;
 
     if (name.length === 0) {
         generateErrorMessage("The name of the new field cannot be blank.");
+        loading.style.display = "none";
         return;
     }
 
     if (fields.includes(name)) {
         generateErrorMessage("The database already contains a field with this name.");
+        loading.style.display = "none";
         return;
     }
 
-    openFieldPopup();
-    clearAddFieldForm();
+    clearAddFieldForm(); // You can still clear early
 
     fetch('/add_field_to_db', {
         method: 'POST',
@@ -38,12 +39,21 @@ function addNewField() {
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
-        return response.json(); // Ensure response is processed
+        return response.json();
     })
-    .catch(error => console.error('Error:', error));
+    .then(data => {
+        openFieldPopup();              
+        loading.style.display = "none"; 
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        generateErrorMessage("There was an error adding the new field.");
+        loading.style.display = "none"; // Still hide it on error
+    });
 }
 
-function deleteField(){
+
+function deleteField() {
     let field = document.getElementById("delete-field-select").value;
 
     if (field == "") {
@@ -51,8 +61,8 @@ function deleteField(){
         return;
     }
 
-    openFieldPopup();
-    removeFieldFromSelect(field);
+    loading.style.display = "flex"; // Show loading while request is in progress
+
     fetch('/delete_field_from_db', {
         method: 'POST',
         headers: {
@@ -66,13 +76,21 @@ function deleteField(){
         }
         return response.json();
     })
+    .then(data => {
+        removeFieldFromSelect(field);  
+        openFieldPopup();              
+        loading.style.display = "none";
+    })
     .catch(error => {
         console.error("Error:", error);
         alert(`Error deleting field: ${error.message}`);
+        loading.style.display = "none";
     });
 }
 
+
 function addStudent(){
+    loading.style.display = "flex";
     document.getElementById("add-student-form").submit();
 }
 

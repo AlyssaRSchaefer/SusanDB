@@ -26,14 +26,14 @@
           {% if session["mode"] != "view" %}
             <li><a href="{{ url_for('import_data') }}">IMPORT DATA</a></li>
           {% endif %}
-          <li><a href="{{ url_for('templates') }}">TEMPLATES</a></li>
+          <li><a href="{{ url_for('templates') }}" id="templates-link">TEMPLATES</a></li>
           {% if session["mode"] != "view" %}
               <li><a href="{{ url_for('admin') }}">ADMIN</a></li>
           {% endif %}
         </ul>
       </div>
       <ul class="navbar-links">
-        <li><a href="{{ url_for('logout') }}">LOGOUT</a></li>
+        <li><a href="{{ url_for('logout') }}" id="logout-link">LOGOUT</a></li>
       </ul>
     </div>
   </nav>
@@ -42,6 +42,10 @@
         <img src="static\icons\icon-search.png" width="50px">
       </div>
   {% endif %}
+  
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+  </div>
 
   <div class="auxiliary">
     <a href="{{ back_link }}" class="back-button"> <!-- Dynamic back link -->
@@ -50,8 +54,23 @@
     <div class="auxiliary-content">                     
         <h1>{{ heading }}</h1>                  <!-- Dynamic heading -->
         {% block content %}{% endblock %}       <!-- Dynamic content -->
-        {% block script %}{% endblock %}        <!-- Dynamic script -->
     </div>
   </div>
+
+  <script>
+    const loading = document.getElementById("loading-overlay");
+    const templatesLink = document.getElementById('templates-link');
+    const logoutLink = document.getElementById('logout-link');
+    templatesLink.addEventListener('click', function(event) {
+        // Show the loading overlay when the TEMPLATES link is clicked
+        loading.style.display = 'flex';
+    });
+    logoutLink.addEventListener('click', function(event) {
+        // Show the loading overlay when the LOGOUT link is clicked
+        loading.style.display = 'flex';
+    });
+  </script>
+
+  {% block script %}{% endblock %}        <!-- Dynamic script -->
 </body>
 </html>

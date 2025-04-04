@@ -160,6 +160,8 @@ function openGenerateReportPage() {
         alert("Please select at least one student to generate a report.");
         return;
     }
+    
+    loading.style.display = "flex";
 
     // Convert selected student IDs into a query string
     const queryString = selectedStudents.map(id => `ids[]=${encodeURIComponent(id)}`).join('&');
@@ -189,6 +191,7 @@ function hideConfirmDeletePopup() {
 }
 
 function deleteStudents() {
+    loading.style.display = "flex";
     fetch('/delete_students_from_db', {
         method: 'POST',
         headers: {
@@ -200,12 +203,12 @@ function deleteStudents() {
     .then(data => {
         if (data.message) {
             fetchData();
-            alert("Students deleted successfully!");
         } else if (data.error) {
             console.error("Error:", data.error);
             alert("Error: " + data.error);
         }
         hideConfirmDeletePopup();
+        loading.style.display = "none";
     })
     .catch(error => console.error("Fetch error:", error));
 }
