@@ -382,6 +382,14 @@ a {
     justify-content: right;
 }
 
+.database-table-count {
+    margin-top: 10px;
+    color: var(--quarternary-color);
+    text-align: center;
+    font-style: italic;
+    width: 100%;
+}
+
 .search-container {
     display: flex;
     justify-content: space-between;

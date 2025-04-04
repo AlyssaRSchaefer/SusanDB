@@ -277,6 +277,8 @@ function fetchData(sort = {}, filter = [], search="") {
     .then(response => response.json())
     .then(data => {
         table.innerHTML = '';
+        const count = data.length;
+        document.getElementById("database-table-count").textContent = `»»———- ${count} Records Found ———-««`
         data.forEach(row => {
             const tr = document.createElement("tr");
             tr.id = "database-row-" + row["id"];
