@@ -286,7 +286,7 @@ a {
 
 .title-bar-button:hover {
     cursor: pointer;
-    color: var(--primprimary-color-highlight);
+    color: var(--primary-color-highlight);
 }
 
 /* MULTIPLE PAGES */
@@ -561,6 +561,17 @@ td, th {
     left: 155px;
 }
 
+.details-file-options {
+    position: absolute;
+    top: 5px;
+    right: 155px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    display: none;
+}
+
 .details-table {
     border-collapse: separate; 
     border-spacing: 0 2px;
@@ -636,6 +647,10 @@ td, th {
     display: flex;
     justify-content: center;
     margin-bottom: 2px;
+}
+
+.details-file-icon:hover {
+    cursor: pointer;
 }
 
 .details-file-icon img {

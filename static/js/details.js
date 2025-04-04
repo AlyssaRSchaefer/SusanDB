@@ -5,6 +5,8 @@ const heading = document.querySelector("h1");
 const filesContainer = document.getElementById("details-file-icons");
 const noFilesIndicator = document.getElementById("details-no-files-indicator");
 const loadingSpinner = document.getElementById("details-loading-spinner");
+const fileOptions = document.getElementById("details-file-options");
+let selectedFile = "";
 
 function openDetailsUploadPage(){
     const studentId = encodeURIComponent(id);
@@ -31,15 +33,115 @@ function updateCellData(id, field, newValue) {
     });
 }
 
+function encodeFileId(fileName) {
+    return "file-" + btoa(fileName); // base64-encode the filename
+}
+
 function addFileDiv(fileName){
+    const encodedId = encodeFileId(fileName);
     const div = document.createElement("div");
     div.classList = "details-file";
-    div.innerHTML = '<div class="details-file-icon"><img src="static/icons/icon-file.png" alt="File"></div><div class="details-file-name">' + fileName + '</div'
+    div.innerHTML = `
+        <div class="details-file-icon" id="${encodedId}" onclick="selectFile('${fileName}')">
+            <img src="static/icons/icon-file.png" alt="File">
+        </div>
+        <div class="details-file-name">${fileName}</div>
+    `;    
     filesContainer.appendChild(div);
 
     setTimeout(() => {
         div.classList.add("appear");
     }, 10);
+}
+
+function selectFile(fileName) {
+    if (selectedFile === fileName) {
+        deselectFile(fileName);
+        selectedFile = "";
+        closeFileOptionsMenu();
+        return;
+    }
+    if (selectedFile !== "") {
+        deselectFile(selectedFile);
+    }
+    selectedFile = fileName;
+    openFileOptionsMenu();
+    const file = document.getElementById(encodeFileId(fileName));
+    if (file) file.style.backgroundColor = "var(--secondary-color)";
+}
+
+function deselectFile(fileName) {
+    const file = document.getElementById(encodeFileId(fileName));
+    if (file) file.style.backgroundColor = "var(--tertiary-color)";
+}
+
+function openFileOptionsMenu(){
+    fileOptions.style.display = "flex";
+}
+
+function closeFileOptionsMenu(){
+    fileOptions.style.display = "none";
+}
+
+function openConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "flex";
+}
+
+function hideConfirmDeletePopup() {
+    let popup = document.getElementById("database-confirm-delete-menu");
+    popup.style.display = "none";
+}
+
+function deleteFile() {
+    fetch('/delete_student_file', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ student_id: id, file_name: selectedFile })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert("Error: " + data.error);
+        } else {
+            alert("File deleted successfully!");
+            // Optionally, refresh the file list or remove the file icon from the UI
+            fetchStudentFiles(id); // Refresh the file list
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an issue deleting the file.');
+    });
+}
+
+function downloadSelectedFile() {
+    fetch('/download_student_file', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ student_id: id, file_name: selectedFile })
+    })
+    .then(response => response.blob())  // Make sure to return the blob here
+    .then(blob => {
+        if (!blob) {
+            alert("Error: No file received.");
+            return;
+        }
+        
+        // Trigger file download by creating a link and clicking it programmatically
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = selectedFile;
+        link.click();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an issue downloading the file.');
+    });
 }
 
 function fetchStudentById(studentId) {

@@ -6,6 +6,10 @@
 
 <div class="details">
     <div id="details-upload-button" class="button primary-button" onclick="openDetailsUploadPage()">UPLOAD FILE</div>
+    <div class="details-file-options" id="details-file-options">
+        <div class="button primary-button" onclick="downloadSelectedFile()">DOWNLOAD FILE</div>
+        <div class="button primary-button" onclick="openConfirmDeletePopup()">DELETE FILE</div>
+    </div>
     <div class="details-fields" id="details-fields">
         <table class="details-table">
             <tbody id="details-table">
@@ -21,6 +25,16 @@
         </div>
         <div class="details-file-icons" id="details-file-icons">
 
+        </div>
+    </div>
+</div>
+
+<div id="database-confirm-delete-menu" class="popup-overlay" style="display: none;">
+    <div class="popup-content">
+        <h3 class="templates-popup-header">Are you sure?</h3>
+        <div>
+            <button class="secondary-button popup-button" onclick="hideConfirmDeletePopup()">CANCEL</button>
+            <button class="primary-button popup-button" onclick="deleteFile()">DELETE FILE</button>
         </div>
     </div>
 </div>

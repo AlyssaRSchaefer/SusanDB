@@ -705,6 +705,79 @@ def process_new_student_file():
 
     return redirect(url_for('details', id=student_id))
 
+@app.route('/delete_student_file', methods=['POST'])
+def delete_student_file():
+    data = request.get_json()
+    student_id = data.get('student_id')
+    file_name = data.get('file_name')
+
+    if not student_id or not file_name:
+        return jsonify({'error': 'Missing student_id or file_name'}), 400
+
+    # Get the student folder ID
+    student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
+    if not student_folder_id:
+        return jsonify({'error': 'Failed to retrieve student folder'}), 400
+
+    # Find the file in the student folder
+    file_id = find_file_in_folder(session["access_token"], student_folder_id, file_name)
+    if not file_id:
+        return jsonify({'error': 'File not found in student folder'}), 404
+
+    # Delete the file
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}"
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code == 204:  # Successful deletion
+        return jsonify({'message': 'File deleted successfully'}), 200
+    else:
+        return jsonify({'error': f'Error deleting file: {response.status_code}'}), 500
+
+def find_file_in_folder(access_token, folder_id, file_name):
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        items = response.json().get("value", [])
+        for item in items:
+            if item.get("name") == file_name and item.get("file"):
+                return item["id"]
+    return None
+
+@app.route('/download_student_file', methods=['POST'])
+def download_student_file():
+    data = request.get_json()
+    student_id = data.get('student_id')
+    file_name = data.get('file_name')
+
+    if not student_id or not file_name:
+        return jsonify({'error': 'Missing student_id or file_name'}), 400
+
+    # Get the student folder ID
+    student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
+    if not student_folder_id:
+        return jsonify({'error': 'Failed to retrieve student folder'}), 400
+
+    # Find the file in the student folder
+    file_id = find_file_in_folder(session["access_token"], student_folder_id, file_name)
+    if not file_id:
+        return jsonify({'error': 'File not found in student folder'}), 404
+
+    # Get the file content
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        # Send the file as a response with the correct content type
+        return Response(response.content,
+                        mimetype='application/octet-stream',
+                        headers={"Content-Disposition": f"attachment;filename={file_name}"})
+    else:
+        return jsonify({'error': f'Error downloading file: {response.status_code}'}), 500
+
 @app.route('/generate_preview', methods=['POST'])
 def generate_preview():
     try:
@@ -845,7 +918,7 @@ def layout():
 @app.route('/details')
 def details():
     return render_template('auxiliary/details.html',
-                           heading="test",  # Assuming only one student
+                           heading="",
                            back_link="/database")
 
 @app.route('/details_upload')
@@ -1196,7 +1269,7 @@ def update_database_cell():
 
 @app.route('/get_student', methods=['POST'])
 def get_student():
-    data = request.get_json()
+    data = request.get_json() 
     student_id = data.get('id')
     if not student_id:
         return jsonify({"error": "No student ID provided"}), 400
