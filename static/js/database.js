@@ -5,6 +5,8 @@ let studentIDs = [];
 let filter = [];
 let search = "";
 let allStudentsSelected = false;
+const sessionModeElement = document.getElementById('session-mode');
+const sessionMode = sessionModeElement ? sessionModeElement.getAttribute('data-mode') : null;
 
 /* SEARCH LOGIC */
 const searchTerm = document.getElementById("database-search-term");
@@ -299,52 +301,54 @@ function fetchData(sort = {}, filter = [], search="") {
                 }
 
                 td.innerHTML = cellText;
-
-                td.ondblclick = function () {
-                    // Check if an input field already exists
-                    if (td.querySelector('input')) {
-                        return; // Prevent adding another input
-                    }
                 
-                    const originalText = td.innerHTML;
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
-                    input.classList.add("database-cell-input");
-                    input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
-                    td.innerHTML = '';
-                    td.appendChild(input);
-                    input.focus();
-                
-                    function resizeInput() {
-                        const span = document.createElement("span");
-                        span.style.visibility = "hidden";
-                        span.style.whiteSpace = "pre";
-                        span.style.font = getComputedStyle(input).font;
-                        span.textContent = input.value || " "; // Avoid width collapse
-                        document.body.appendChild(span);
-                
-                        input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
-                        document.body.removeChild(span);
-                    }
-                
-                    input.addEventListener("input", resizeInput);
-                    resizeInput(); // Initial resize based on current text
-                
-                    // Save the edited value when user presses Enter or loses focus
-                    function saveValue() {
-                        td.innerHTML = input.value;
-                        updateCellData(row["id"], col, input.value);
-                    }
-                
-                    input.onblur = saveValue;
-                    input.onkeydown = function (e) {
-                        if (e.key === 'Enter') {
-                            saveValue();
+                if (sessionMode != "view") {
+                    td.ondblclick = function () {
+                        // Check if an input field already exists
+                        if (td.querySelector('input')) {
+                            return; // Prevent adding another input
                         }
-                    };
-                };                
-
+                    
+                        const originalText = td.innerHTML;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
+                        input.classList.add("database-cell-input");
+                        input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
+                        td.innerHTML = '';
+                        td.appendChild(input);
+                        input.focus();
+                    
+                        function resizeInput() {
+                            const span = document.createElement("span");
+                            span.style.visibility = "hidden";
+                            span.style.whiteSpace = "pre";
+                            span.style.font = getComputedStyle(input).font;
+                            span.textContent = input.value || " "; // Avoid width collapse
+                            document.body.appendChild(span);
+                    
+                            input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
+                            document.body.removeChild(span);
+                        }
+                    
+                        input.addEventListener("input", resizeInput);
+                        resizeInput(); // Initial resize based on current text
+                    
+                        // Save the edited value when user presses Enter or loses focus
+                        function saveValue() {
+                            td.innerHTML = input.value;
+                            updateCellData(row["id"], col, input.value);
+                        }
+                    
+                        input.onblur = saveValue;
+                        input.onkeydown = function (e) {
+                            if (e.key === 'Enter') {
+                                saveValue();
+                            }
+                        };
+                    };                
+                }
+                
                 tr.appendChild(td);
             });
 
