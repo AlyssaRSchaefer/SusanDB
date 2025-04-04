@@ -6,6 +6,7 @@
     --secondary-color-highlight: #F2F2F2;
     --tertiary-color: #ffffff; /* white */
     --quarternary-color: #747474; /* dark gray */
+    --secondary-color-transparent: #E8E8E8CC;
 
     /* Fonts */
     --font-primary: "Courier New", monospace; /* For titles */
@@ -172,6 +173,29 @@ a {
     pointer-events: auto;
 }
 
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--secondary-color-transparent);
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    margin-top: 10px;
+    width: 100px;
+    height: 100px;
+    border: 10px solid var(--tertiary-color);
+    border-top: 10px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
 /* Tooltip styling */
 .button.primary-button.disabled-button::after {
     content: "You are in view mode and cannot make changes";
@@ -286,7 +310,7 @@ a {
 
 .title-bar-button:hover {
     cursor: pointer;
-    color: var(--primprimary-color-highlight);
+    color: var(--primary-color-highlight);
 }
 
 /* MULTIPLE PAGES */
@@ -356,6 +380,14 @@ a {
 .database-controls-right{
     display: flex;
     justify-content: right;
+}
+
+.database-table-count {
+    margin-top: 10px;
+    color: var(--quarternary-color);
+    text-align: center;
+    font-style: italic;
+    width: 100%;
 }
 
 .search-container {
@@ -561,10 +593,25 @@ td, th {
     left: 155px;
 }
 
+.details-file-options {
+    position: absolute;
+    top: 5px;
+    right: 155px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    display: none;
+}
+
 .details-table {
     border-collapse: separate; 
     border-spacing: 0 2px;
     width: 100%;
+}
+
+.details-table td {
+    white-space: normal;
 }
 
 .details-table tbody tr {
@@ -586,8 +633,17 @@ td, th {
 }
 
 .details-files-header {
-    color: var(--quarternary-color);
     background-color: var(--tertiary-color);
+}
+
+.details-no-files-indicator {
+    background-color: var(--secondary-color);
+    font-style: italic;
+    display: none;
+}
+
+.details-files-header, .details-no-files-indicator {
+    color: var(--quarternary-color);
     text-align: center;
     padding-top: 10px;
     padding-bottom: 10px;
@@ -606,6 +662,14 @@ td, th {
     width: 100%;
     height: auto;
     min-width: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.details-file.appear {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .details-file-icon {
@@ -615,6 +679,10 @@ td, th {
     display: flex;
     justify-content: center;
     margin-bottom: 2px;
+}
+
+.details-file-icon:hover {
+    cursor: pointer;
 }
 
 .details-file-icon img {
@@ -640,6 +708,25 @@ td, th {
     flex-direction: column;
     gap:10px;
 }
+
+.details-loading {
+    margin-top: 10px;
+    width: 30px;
+    height: 30px;
+    border: 4px solid var(--tertiary-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
 
 /* TEMPLATES PAGE (also utilized in LAYOUT PAGE) */
 .templates-body {

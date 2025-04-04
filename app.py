@@ -18,8 +18,9 @@ from datetime import datetime
 import time
 import pandas as pd
 from werkzeug.utils import secure_filename
+import requests
 
-from utils.onedrive_utils import get_user_profile, download_file_from_share_url, update_file_from_share_url
+from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
@@ -37,10 +38,13 @@ REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
 REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
 FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
+STUDENT_FILES_URL = os.getenv("STUDENT_FILES_URL")
 
 EXCEL_UPLOAD_FOLDER = 'uploads'
 app.config['EXCEL_UPLOAD_FOLDER'] = EXCEL_UPLOAD_FOLDER
 EXCEL_FILE_PATH = os.path.join(app.config['EXCEL_UPLOAD_FOLDER'], "imported_data.xlsx")
+UPLOAD_FOLDER = "student_files"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 STUDENT_DB_LOCAL_PATH="students_local.db"
 FIELD_ORDER_LOCAL_PATH="field_order.txt"
 global_mode = None # this stores if the user is in view mode or edit mode. NOTE: it cannot be a session variable as a thread that is not flask must access it
@@ -588,6 +592,192 @@ def process_import_excel_file():
         print(f'Error processing file: {str(e)}')
         return redirect(url_for('import_data'))
 
+def find_folder(access_token, parent_folder_id, folder_name):
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{parent_folder_id}/children"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        items = response.json().get("value", [])
+        for item in items:
+            if item.get("name") == folder_name and item.get("folder"):
+                return item["id"]  # Return folder ID
+        return None  # Folder not found
+    else:
+        return None
+
+def create_folder(access_token, parent_folder_id, folder_name):
+    url = "https://graph.microsoft.com/v1.0/me/drive/items/{}/children".format(parent_folder_id)
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "name": folder_name,
+        "folder": {},
+        "@microsoft.graph.conflictBehavior": "rename"
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code in [200, 201]:
+        return response.json().get("id")  # Return new folder ID
+    else:
+        return None
+
+def upload_file_to_student_folder(access_token, student_folder_name, student_files_parent_id, file_path, file_name):
+    # Step 1: Find the student folder
+    folder_id = find_folder(access_token, student_files_parent_id, student_folder_name)
+    
+    # Step 2: Create if it does not exist
+    if not folder_id:
+        folder_id = create_folder(access_token, student_files_parent_id, student_folder_name)
+        if not folder_id:
+            return False, "Failed to create folder."
+    
+    # Step 3: Upload file to folder
+    return upload_new_file_no_duplicate(access_token, file_path, file_name, folder_id)
+
+def get_or_create_student_folder(access_token, student_id):
+    student_folder_name = f"student-{student_id}"
+
+    # Convert STUDENT_FILES_URL to folder ID
+    parent_folder_id = get_folder_id_from_url(access_token, STUDENT_FILES_URL)
+    if not parent_folder_id:
+        return None
+
+    # Find the student folder
+    folder_id = find_folder(access_token, parent_folder_id, student_folder_name)
+
+    # Create if not found
+    if not folder_id:
+        folder_id = create_folder(access_token, parent_folder_id, student_folder_name)
+    
+    return folder_id
+
+def get_folder_id_from_url(access_token, sharing_url):
+    share_id = generate_share_id(sharing_url)
+    url = f"https://graph.microsoft.com/v1.0/shares/{share_id}/driveItem"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.json().get("id")  # Return OneDrive folder ID
+    else:
+        return None
+
+@app.route('/process_new_student_file', methods=['POST'])
+def process_new_student_file():
+    student_id = request.form.get('student-id')
+
+    if 'file' not in request.files:
+        flash('Error: File cannot upload')
+        return redirect(url_for('details_upload', id=student_id))
+
+    file = request.files['file']
+
+    if file.filename == '':
+        flash('Error: No selected file')
+        return redirect(url_for('details_upload', id=student_id))
+
+    # Get or create student folder
+    student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
+    if not student_folder_id:
+        flash('Failed to retrieve or create student folder')
+        return redirect(url_for('details_upload', id=student_id))
+
+    # Save the file temporarily before uploading
+    local_file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(local_file_path)
+
+    # Upload file to OneDrive
+    success, message = upload_new_file_no_duplicate(session["access_token"], local_file_path, file.filename, student_folder_id)
+    
+    # Cleanup local file
+    os.remove(local_file_path)
+
+    if success:
+        flash('File successfully uploaded to OneDrive!')
+    else:
+        flash(f'File upload failed: {message}')
+
+    return redirect(url_for('details', id=student_id))
+
+@app.route('/delete_student_file', methods=['POST'])
+def delete_student_file():
+    data = request.get_json()
+    student_id = data.get('student_id')
+    file_name = data.get('file_name')
+
+    if not student_id or not file_name:
+        return jsonify({'error': 'Missing student_id or file_name'}), 400
+
+    # Get the student folder ID
+    student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
+    if not student_folder_id:
+        return jsonify({'error': 'Failed to retrieve student folder'}), 400
+
+    # Find the file in the student folder
+    file_id = find_file_in_folder(session["access_token"], student_folder_id, file_name)
+    if not file_id:
+        return jsonify({'error': 'File not found in student folder'}), 404
+
+    # Delete the file
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}"
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code == 204:  # Successful deletion
+        return jsonify({'message': 'File deleted successfully'}), 200
+    else:
+        return jsonify({'error': f'Error deleting file: {response.status_code}'}), 500
+
+def find_file_in_folder(access_token, folder_id, file_name):
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        items = response.json().get("value", [])
+        for item in items:
+            if item.get("name") == file_name and item.get("file"):
+                return item["id"]
+    return None
+
+@app.route('/download_student_file', methods=['POST'])
+def download_student_file():
+    data = request.get_json()
+    student_id = data.get('student_id')
+    file_name = data.get('file_name')
+
+    if not student_id or not file_name:
+        return jsonify({'error': 'Missing student_id or file_name'}), 400
+
+    # Get the student folder ID
+    student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
+    if not student_folder_id:
+        return jsonify({'error': 'Failed to retrieve student folder'}), 400
+
+    # Find the file in the student folder
+    file_id = find_file_in_folder(session["access_token"], student_folder_id, file_name)
+    if not file_id:
+        return jsonify({'error': 'File not found in student folder'}), 404
+
+    # Get the file content
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
+    headers = {"Authorization": f"Bearer {session['access_token']}"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        # Send the file as a response with the correct content type
+        return Response(response.content,
+                        mimetype='application/octet-stream',
+                        headers={"Content-Disposition": f"attachment;filename={file_name}"})
+    else:
+        return jsonify({'error': f'Error downloading file: {response.status_code}'}), 500
+
 @app.route('/generate_preview', methods=['POST'])
 def generate_preview():
     try:
@@ -728,7 +918,7 @@ def layout():
 @app.route('/details')
 def details():
     return render_template('auxiliary/details.html',
-                           heading="test",  # Assuming only one student
+                           heading="",
                            back_link="/database")
 
 @app.route('/details_upload')
@@ -889,6 +1079,37 @@ def query_db(sort, filter_params, search_term):
 def get_student_fields():
     return get_all_fields()
 
+@app.route('/get_student_files', methods=['POST'])
+def get_student_files():
+    access_token = session.get("access_token")
+    if not access_token:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    student_id = data.get("student_id")
+
+    if not student_id:
+        return jsonify({"error": "Missing student_id"}), 400
+
+    # Get student folder ID
+    student_folder_id = get_or_create_student_folder(access_token, student_id)
+    if not student_folder_id:
+        return jsonify({"error": "Student folder not found"}), 404
+
+    # Get list of files
+    url = f"https://graph.microsoft.com/v1.0/me/drive/items/{student_folder_id}/children"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code == 200:
+        items = response.json().get("value", [])
+        file_names = [item["name"] for item in items if "file" in item]  # Filter out folders
+        return jsonify({"files": file_names})
+    else:
+        return jsonify({"error": "Failed to retrieve files", "details": response.text}), response.status_code
+
+
 @app.route('/get_field_values', methods=['POST'])
 def get_field_values():
     data = request.json
@@ -1048,7 +1269,7 @@ def update_database_cell():
 
 @app.route('/get_student', methods=['POST'])
 def get_student():
-    data = request.get_json()
+    data = request.get_json() 
     student_id = data.get('id')
     if not student_id:
         return jsonify({"error": "No student ID provided"}), 400

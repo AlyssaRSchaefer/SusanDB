@@ -5,6 +5,8 @@ let studentIDs = [];
 let filter = [];
 let search = "";
 let allStudentsSelected = false;
+const sessionModeElement = document.getElementById('session-mode');
+const sessionMode = sessionModeElement ? sessionModeElement.getAttribute('data-mode') : null;
 
 /* SEARCH LOGIC */
 const searchTerm = document.getElementById("database-search-term");
@@ -160,6 +162,8 @@ function openGenerateReportPage() {
         alert("Please select at least one student to generate a report.");
         return;
     }
+    
+    loading.style.display = "flex";
 
     // Convert selected student IDs into a query string
     const queryString = selectedStudents.map(id => `ids[]=${encodeURIComponent(id)}`).join('&');
@@ -189,6 +193,7 @@ function hideConfirmDeletePopup() {
 }
 
 function deleteStudents() {
+    loading.style.display = "flex";
     fetch('/delete_students_from_db', {
         method: 'POST',
         headers: {
@@ -200,12 +205,12 @@ function deleteStudents() {
     .then(data => {
         if (data.message) {
             fetchData();
-            alert("Students deleted successfully!");
         } else if (data.error) {
             console.error("Error:", data.error);
             alert("Error: " + data.error);
         }
         hideConfirmDeletePopup();
+        loading.style.display = "none";
     })
     .catch(error => console.error("Fetch error:", error));
 }
@@ -274,6 +279,8 @@ function fetchData(sort = {}, filter = [], search="") {
     .then(response => response.json())
     .then(data => {
         table.innerHTML = '';
+        const count = data.length;
+        document.getElementById("database-table-count").textContent = `»»———- ${count} Records Found ———-««`
         data.forEach(row => {
             const tr = document.createElement("tr");
             tr.id = "database-row-" + row["id"];
@@ -294,52 +301,54 @@ function fetchData(sort = {}, filter = [], search="") {
                 }
 
                 td.innerHTML = cellText;
-
-                td.ondblclick = function () {
-                    // Check if an input field already exists
-                    if (td.querySelector('input')) {
-                        return; // Prevent adding another input
-                    }
                 
-                    const originalText = td.innerHTML;
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
-                    input.classList.add("database-cell-input");
-                    input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
-                    td.innerHTML = '';
-                    td.appendChild(input);
-                    input.focus();
-                
-                    function resizeInput() {
-                        const span = document.createElement("span");
-                        span.style.visibility = "hidden";
-                        span.style.whiteSpace = "pre";
-                        span.style.font = getComputedStyle(input).font;
-                        span.textContent = input.value || " "; // Avoid width collapse
-                        document.body.appendChild(span);
-                
-                        input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
-                        document.body.removeChild(span);
-                    }
-                
-                    input.addEventListener("input", resizeInput);
-                    resizeInput(); // Initial resize based on current text
-                
-                    // Save the edited value when user presses Enter or loses focus
-                    function saveValue() {
-                        td.innerHTML = input.value;
-                        updateCellData(row["id"], col, input.value);
-                    }
-                
-                    input.onblur = saveValue;
-                    input.onkeydown = function (e) {
-                        if (e.key === 'Enter') {
-                            saveValue();
+                if (sessionMode != "view") {
+                    td.ondblclick = function () {
+                        // Check if an input field already exists
+                        if (td.querySelector('input')) {
+                            return; // Prevent adding another input
                         }
-                    };
-                };                
-
+                    
+                        const originalText = td.innerHTML;
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
+                        input.classList.add("database-cell-input");
+                        input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
+                        td.innerHTML = '';
+                        td.appendChild(input);
+                        input.focus();
+                    
+                        function resizeInput() {
+                            const span = document.createElement("span");
+                            span.style.visibility = "hidden";
+                            span.style.whiteSpace = "pre";
+                            span.style.font = getComputedStyle(input).font;
+                            span.textContent = input.value || " "; // Avoid width collapse
+                            document.body.appendChild(span);
+                    
+                            input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
+                            document.body.removeChild(span);
+                        }
+                    
+                        input.addEventListener("input", resizeInput);
+                        resizeInput(); // Initial resize based on current text
+                    
+                        // Save the edited value when user presses Enter or loses focus
+                        function saveValue() {
+                            td.innerHTML = input.value;
+                            updateCellData(row["id"], col, input.value);
+                        }
+                    
+                        input.onblur = saveValue;
+                        input.onkeydown = function (e) {
+                            if (e.key === 'Enter') {
+                                saveValue();
+                            }
+                        };
+                    };                
+                }
+                
                 tr.appendChild(td);
             });
 

@@ -11,6 +11,7 @@ function displaySaveButton() {
 }
 
 function saveColorScheme() {
+    loading.style.display = "flex";
     let colorScheme = colorSchemeSelect.value;
     saveButton.style.display = "none";
 
@@ -20,7 +21,7 @@ function saveColorScheme() {
         body: JSON.stringify({ colorScheme: colorScheme })
     })
     .then(response => response.json())
-    .then(data => console.log(data))
+    .then(() => loading.style.display = "none")
     .catch(error => console.error("Error:", error));
 }
 

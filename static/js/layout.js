@@ -105,6 +105,9 @@ function deleteField(fieldName) {
 
 
 function saveLayoutChanges() {
+    loading.style.display = "flex";
+    document.getElementById('save-fields-btn').style.display = 'none';
+    document.getElementById('revert-fields-btn').style.display = 'none';
     const updatedFields = [];
     document.querySelectorAll(".layout-field-name").forEach(fieldCell => {
         updatedFields.push(fieldCell.textContent.trim().replace(" ", "_").toLowerCase());
@@ -120,10 +123,8 @@ function saveLayoutChanges() {
     .then(response => response.json())
     .then(data => {
         if (data.message) {
-            alert("Fields updated successfully!");
             hasChanges = false;
-            document.getElementById('save-fields-btn').style.display = 'none';
-            document.getElementById('revert-fields-btn').style.display = 'none';
+            loading.style.display = "none";
         } else {
             alert("Error updating fields.");
         }

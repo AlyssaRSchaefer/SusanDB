@@ -6,6 +6,10 @@
 
 <div class="details">
     <div id="details-upload-button" class="button primary-button" onclick="openDetailsUploadPage()">UPLOAD FILE</div>
+    <div class="details-file-options" id="details-file-options">
+        <div class="button primary-button" onclick="downloadSelectedFile()">DOWNLOAD FILE</div>
+        <div class="button primary-button" onclick="openConfirmDeletePopup()">DELETE FILE</div>
+    </div>
     <div class="details-fields" id="details-fields">
         <table class="details-table">
             <tbody id="details-table">
@@ -15,37 +19,22 @@
     </div>
     <div class="details-files" id="details-files">
         <div class="details-files-header">FILES</div>
-        <div class="details-file-icons">
-            <div class="details-file">
-                <div class="details-file-icon">
-                    <img src="static/icons/icon-file.png" alt="File">
-                </div>
-                <div class="details-file-name">transcript.png</div>
-            </div>
-            <div class="details-file">
-                <div class="details-file-icon">
-                    <img src="static/icons/icon-file.png" alt="File">
-                </div>
-                <div class="details-file-name">exampledocument.png</div>
-            </div>
-            <div class="details-file">
-                <div class="details-file-icon">
-                    <img src="static/icons/icon-file.png" alt="File">
-                </div>
-                <div class="details-file-name">transcript.png</div>
-            </div>
-            <div class="details-file">
-                <div class="details-file-icon">
-                    <img src="static/icons/icon-file.png" alt="File">
-                </div>
-                <div class="details-file-name">transcript.png</div>
-            </div>
-            <div class="details-file">
-                <div class="details-file-icon">
-                    <img src="static/icons/icon-file.png" alt="File">
-                </div>
-                <div class="details-file-name">transcript.png</div>
-            </div>
+        <center><div id="details-loading-spinner" class="details-loading"></div></center>
+        <div class="details-no-files-indicator" id="details-no-files-indicator">
+            No associated files.
+        </div>
+        <div class="details-file-icons" id="details-file-icons">
+
+        </div>
+    </div>
+</div>
+
+<div id="database-confirm-delete-menu" class="popup-overlay" style="display: none;">
+    <div class="popup-content">
+        <h3 class="templates-popup-header">Are you sure?</h3>
+        <div>
+            <button class="secondary-button popup-button" onclick="hideConfirmDeletePopup()">CANCEL</button>
+            <button class="primary-button popup-button" onclick="deleteFile()">DELETE FILE</button>
         </div>
     </div>
 </div>

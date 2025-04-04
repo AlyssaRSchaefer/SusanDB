@@ -3,6 +3,9 @@
 {% block title %}Database Page{% endblock %}
 
 {% block content %}
+
+    <div id="session-mode" data-mode="{{ session['mode'] }}"></div>
+
     <div class="database" id="database">
         <div class="database-heading">
             STUDENT DATABASE
@@ -22,9 +25,11 @@
                         <a href="{{ url_for('database') }}"><div class="button secondary-button">EXIT DELETE MODE</div></a>
                         <div class="button primary-button" onclick="openConfirmDeletePopup()">DELETE STUDENTS</div>
                     {% else %}
+                        {% if session["mode"] != "view" %}
                         <div class="button secondary-button" onclick="openDetailsPage()">DETAILS</div>
                         <a href="{{ url_for('layout') }}"><div class="button secondary-button">LAYOUT</div></a>
                         <a href="{{ url_for('edit_database') }}"><div class="button secondary-button">EDIT DATABASE</div></a>
+                        {% endif %}
                         <div class="button primary-button" onclick="openGenerateReportPage()">GENERATE REPORT</div>
                     {% endif %}
                 </div>
@@ -47,6 +52,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="database-table-count" id="database-table-count"></div>
     </div>
 
     <!-- FILTER POPUP -->
@@ -71,7 +77,7 @@
                 <button class="primary-button popup-button" onclick="deleteStudents()">DELETE STUDENTS</button>
             </div>
         </div>
-      </div>
+    </div>
     {% endif %}
 
 {% endblock %}
