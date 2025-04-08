@@ -27,12 +27,17 @@
             <option value="{{ name }}">{{ name }}</option>
         {% endfor %}
     </select>
+
     <br id="selector-confirm-button-br">
     <button onclick="confirmSelection()" class="primary-button popup-button" id="template-confirm-button">LOAD TEMPLATE</button>
 </div>
 
 <!-- Template Editor -->
 <div class="generate-report-templates-section" id="fields-section" style="display: none;">
+
+  <!-- Report Title Input -->
+  <input type="text" id="report-title" class="templates-select" placeholder="OPTIONAL: Enter title to go at the top of each student report" style="margin-top: 10px; width: 100%; max-width: 400px;" />
+
     <div class="templates-controls">
       <div class="templates-controls-left">
         <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
@@ -226,7 +231,7 @@
     }
   }
 
-  // Dummy function for generating the report—implement as needed.
+  
     function generateReport() {
       if (!currentTemplate) {
           alert("Please select a template first.");
@@ -244,6 +249,8 @@
           return;
       }
       const queryString = window.location.search; // Get existing query params
+      const title = document.getElementById('report-title').value.trim();
+
       fetch(`/generate_report${queryString}`, {
           method: 'POST',
           headers: {
@@ -251,7 +258,8 @@
           },
           body: JSON.stringify({
               template_name: currentTemplate,
-              fields: fields
+              fields: fields,
+              title: title
           })
       })
       .then(response => response.json())

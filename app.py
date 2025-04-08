@@ -147,7 +147,7 @@ def shrink():
         webview.windows[0].resize(2800, 2000)
     return Response(status=204)  # No Content
 
-# logout AND close app
+# logout
 @app.route('/logout')
 def logout():
     global global_mode
@@ -155,6 +155,16 @@ def logout():
     session.clear()
     global_mode=None
     return redirect(url_for('index'))
+
+# logout AND close app
+@app.route('/logout_from_x')
+def logout_from_x():
+    global global_mode
+    delete_lock_file(global_mode)
+    session.clear()
+    global_mode=None
+    webview.windows[0].destroy() #closes the window
+    return Response(status=204)  # No Content
         
 @app.route('/')
 def index():
@@ -298,6 +308,7 @@ def generate_report():
             # Get JSON data from frontend
             data = request.json
             selected_fields = data.get("fields", [])
+            custom_title = data.get("title", "")
 
             print(student_ids)
 
@@ -307,7 +318,7 @@ def generate_report():
             student_data = get_students_by_ids(student_ids, selected_fields)
 
             # Generate PDF using PyWebView's file dialog
-            pdf_path = generate_pdf(student_data, selected_fields)
+            pdf_path = generate_pdf(student_data, selected_fields, custom_title)
 
             if not pdf_path:
                 return jsonify({"success": False, "error": "User canceled save dialog"}), 400
@@ -325,8 +336,8 @@ def generate_report():
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
 
-def generate_pdf(data, fields):
-    """Generate a PDF report with individual student tables on separate pages using FPDF."""
+def generate_pdf(data, fields, custom_title):
+    """Generate a PDF report with a cover page and individual student tables on separate pages using FPDF."""
     file_types = ('PDF (*.pdf)', 'All files (*.*)')
     file_path = webview.windows[0].create_file_dialog(
         webview.SAVE_DIALOG,
@@ -340,46 +351,42 @@ def generate_pdf(data, fields):
 
     # Create a PDF object
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)  # Auto page break with margin
-    pdf.set_margins(20, 15, 20)  # (left, top, right) margins
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_margins(20, 15, 20)
 
+    # ----------------------
+    #  Add the cover page
+    # ----------------------
+    pdf.add_page()
+    pdf.set_font("Times", style="B", size=14)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pdf.cell(0, 10, f"Report generated at: {timestamp}", ln=True, align="C")
+
+    # ----------------------
+    #  Add pages per student
+    # ----------------------
     for student in data:
-        pdf.add_page()  # Add a new page for each student
+        pdf.add_page()
 
-        # Set font for the title
         pdf.set_font("Times", style="B", size=16)
+        pdf.cell(0, 10, custom_title, ln=True, align="C")
+        pdf.ln(5)
 
-        # Find the index where "name" appears in fields (case-insensitive)
-        name_index = next((i for i, field in enumerate(fields) if "last_name" in field.lower()), None)
-
-        if name_index is not None:  # If "name" is found in fields
-            title = f"Student Report - {student[name_index]}"
-        else:
-            title = "Student Report"
-
-        pdf.cell(0, 10, title, ln=True, align="C")  # Use the correct title
-        pdf.ln(5)  # Add some space after the title
-
-        # Set font for the table
         pdf.set_font("Times", size=12)
 
-        # Create a table for the student's data
         for field, value in zip(fields, student):
-            # Add field name in bold
             pdf.set_font("Times", style="B", size=12)
             pdf.cell(60, 10, field, border=1)
 
-            # Add value with text wrapping
             pdf.set_font("Times", size=12)
             pdf.multi_cell(0, 10, str(value), border=1)
-            pdf.ln(0)  # Reset line break after multi_cell
+            pdf.ln(0)
 
-        pdf.ln(10)  # Add some space between students
+        pdf.ln(10)
 
     # Save the PDF
     pdf.output(file_path)
     return file_path
-
 
 @app.route('/templates')
 def templates():
@@ -1318,13 +1325,14 @@ def _build_msal_app():
 
 msal_app = _build_msal_app()
 
-def on_closing(window):
-    if global_mode=='edit':
-        window.evaluate_js("alert('Please logout first.');")
-        #THEY MUST EXIT THROUGH A LOGOUT
-        return False
-    else:
-        return True
+# this can be added if you want to force them to logout first. but, it is annoying when the app crashes
+# def on_closing(window):
+#     if global_mode=='edit':
+#         window.evaluate_js("alert('Please logout first.');")
+#         #THEY MUST EXIT THROUGH A LOGOUT
+#         return False
+#     else:
+#         return True
 
 # Main entry point
 if __name__ == '__main__':
@@ -1335,5 +1343,5 @@ if __name__ == '__main__':
 
     # Create a PyWebView window to load the Flask app
     window = webview.create_window('SusanDB', 'http://127.0.0.1:5000', frameless=True)
-    window.events.closing += on_closing
+    #window.events.closing += on_closing
     webview.start()

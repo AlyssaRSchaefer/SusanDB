@@ -49,6 +49,13 @@ function populateDropdown(dropdown, options) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById("select-all-checkbox").addEventListener("change", function () {
+        const checked = this.checked;
+        document.querySelectorAll("#preview-table-body input[type='checkbox']").forEach(checkbox => {
+            checkbox.checked = checked;
+        });
+    });
+    
     const excelSide = document.querySelector('.excel-side');
     const susandbSide = document.querySelector('.susandb-side');
     const addRuleButton = document.querySelector('.add-rule-button');

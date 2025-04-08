@@ -124,7 +124,7 @@
 </div>
 
 <!-- THIS IS THE FOURTH POP-UP. THE USER WILL CONFIRM UPDATES TO BE MADE-->
-<div id="confirm-update-section"style="display: none; flex-direction: column; align-items: center;">
+<div id="confirm-update-section" style="display: none; flex-direction: column; align-items: center;">
     <h1>SELECT CHANGES</h1>
     <div class="templates-table-container">
         <table class="import-table">
@@ -134,7 +134,11 @@
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>Proposed Change</th>
-                    <th>Select</th>
+                    <th>
+                        <label>
+                            <input type="checkbox" id="select-all-checkbox">
+                        </label>
+                    </th>
                 </tr>
             </thead>
             <tbody id="preview-table-body"></tbody>
@@ -142,7 +146,6 @@
     </div>
     <button id="finalSubmitButton" style="height: auto;" class="primary-button text">SUBMIT</button>
 </div>
-
 <!-- NEED THIS TO PASS TO THE JS FILE-->
 <div id="data-holder" 
      data-columns='{{ columns | tojson | safe }}' 
