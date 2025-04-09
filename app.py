@@ -19,15 +19,35 @@ import time
 import pandas as pd
 from werkzeug.utils import secure_filename
 import requests
+import sys
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
-load_dotenv()
+# This ensures it works in a bundled PyInstaller app
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-app = Flask(__name__)
+# Use correct folder paths for PyInstaller
+base_dir = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(base_dir, "templates"),
+    static_folder=os.path.join(base_dir, "static")
+)
+
+# needed for pyinstaller 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # Configuration from environment variables
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
