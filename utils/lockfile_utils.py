@@ -27,7 +27,18 @@ def generate_share_id(shared_url):
     return f"u!{encoded_url}"
 
 def get_shared_folder_drive_item():
-    """Retrieves the DriveItem ID and driveId of the shared folder."""
+    """Retrieves the DriveItem ID and driveId of the shared folder, cached in session."""
+    cached_drive_key = "shared_folder_drive_id"
+    cached_item_key = "shared_folder_item_id"
+
+    # Return cached values if they exist
+    if cached_drive_key in session and cached_item_key in session:
+        return {
+            "driveId": session[cached_drive_key],
+            "itemId": session[cached_item_key]
+        }
+
+    # Fetch from API if not cached
     share_id = generate_share_id(SHARED_FOLDER_URL)
     url = f"{ONEDRIVE_API_BASE}/shares/{share_id}/driveItem"
 
@@ -35,7 +46,14 @@ def get_shared_folder_drive_item():
 
     if response.status_code == 200:
         data = response.json()
-        return {"driveId": data["parentReference"]["driveId"], "itemId": data["id"]}
+        drive_id = data["parentReference"]["driveId"]
+        item_id = data["id"]
+
+        # Cache the results
+        session[cached_drive_key] = drive_id
+        session[cached_item_key] = item_id
+
+        return {"driveId": drive_id, "itemId": item_id}
     else:
         print(f"Error retrieving shared folder info: {response.status_code} - {response.text}")
         return None

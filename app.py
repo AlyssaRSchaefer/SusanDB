@@ -20,7 +20,7 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 import requests
 
-from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url
+from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url, download_file_from_file_name, update_file_from_file_name
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
@@ -36,9 +36,12 @@ AUTHORITY = os.getenv("AUTHORITY")
 SCOPES = ["Files.ReadWrite.All", "Files.ReadWrite.AppFolder"]
 REDIRECT_URI = os.getenv("REDIRECT_URI")  # Should be msauth://redirect
 STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
-REPORT_TEMPLATE_URL=os.getenv("REPORT_TEMPLATE_URL")
 FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
 STUDENT_FILES_URL = os.getenv("STUDENT_FILES_URL")
+
+REPORT_TEMPLATE_NAME=os.getenv("REPORT_TEMPLATE_NAME")
+STUDENT_DB_NAME=os.getenv("STUDENT_DB_NAME")
+FIELDS_ORDER_NAME = os.getenv("FIELDS_ORDER_NAME")
 
 EXCEL_UPLOAD_FOLDER = 'uploads'
 app.config['EXCEL_UPLOAD_FOLDER'] = EXCEL_UPLOAD_FOLDER
@@ -267,7 +270,7 @@ def get_templates():
     templates_dict = {}
 
     # Download the Excel file from OneDrive
-    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
+    file_content = download_file_from_file_name(session["access_token"], REPORT_TEMPLATE_NAME)
     if not file_content:
         return "Failed to download the existing Excel file.", 500
 
@@ -415,7 +418,7 @@ def new_template():
             return {"error": "User not authenticated. Please log in."}, 401
 
         # Download the current Excel file from OneDrive
-        file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
+        file_content = download_file_from_file_name(session["access_token"], REPORT_TEMPLATE_NAME)
         if not file_content:
             return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -440,8 +443,8 @@ def new_template():
         excel_file_output.seek(0)
 
         # Upload the modified Excel file back to OneDrive
-        upload_success = update_file_from_share_url(
-            access_token, REPORT_TEMPLATE_URL, excel_file_output)
+        upload_success = update_file_from_file_name(
+            access_token, REPORT_TEMPLATE_NAME, excel_file_output)
 
         if upload_success:
             return {"message": "Template appended successfully."}, 201
@@ -466,7 +469,7 @@ def update_template_api():
         return {"error": "User not authenticated. Please log in."}, 401
 
     # Download the current Excel file from OneDrive
-    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
+    file_content = download_file_from_file_name(session["access_token"], REPORT_TEMPLATE_NAME)
     if not file_content:
         return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -502,7 +505,7 @@ def update_template_api():
     excel_file_output.seek(0)
 
     # Upload the modified Excel file back to OneDrive
-    upload_success = update_file_from_share_url(access_token, REPORT_TEMPLATE_URL, excel_file_output)
+    upload_success = update_file_from_file_name(access_token, REPORT_TEMPLATE_NAME, excel_file_output)
 
     if upload_success:
         return {"message": "Template updated successfully."}, 200
@@ -522,7 +525,7 @@ def delete_template_api():
         return {"error": "User not authenticated. Please log in."}, 401
 
     # Download the current Excel file from OneDrive
-    file_content = download_file_from_share_url(session["access_token"], REPORT_TEMPLATE_URL)
+    file_content = download_file_from_file_name(session["access_token"], REPORT_TEMPLATE_NAME)
     if not file_content:
         return {"error": "Failed to download the existing Excel file."}, 500
 
@@ -553,7 +556,7 @@ def delete_template_api():
     excel_file_output.seek(0)
 
     # Upload the modified Excel file back to OneDrive
-    upload_success = update_file_from_share_url(access_token, REPORT_TEMPLATE_URL, excel_file_output)
+    upload_success = update_file_from_file_name(access_token, REPORT_TEMPLATE_NAME, excel_file_output)
 
     if upload_success:
         return {"message": "Template deleted successfully."}, 200
