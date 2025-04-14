@@ -1,4 +1,4 @@
-from flask import Flask, g, session, render_template, jsonify, request, Response
+from flask import Flask, g, session, render_template, jsonify, request, Response, send_file
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -7,7 +7,7 @@ import threading
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 import secrets
 import tempfile
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook 
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
@@ -177,6 +177,40 @@ def database():
 @app.route('/admin')
 def admin():
     return render_template("admin.html")
+
+@app.route("/export_to_excel", methods=["GET"])
+def export_to_excel():
+    db = get_db()
+    cursor = db.execute("SELECT * FROM students")
+    students = [dict(row) for row in cursor.fetchall()]
+
+    #if no students, return empty Excel sheet
+    if not students:
+        return "No data to export", 204
+
+    #create Excel workbook
+    wb = Workbook()
+    ws = wb.active
+
+    #write headers from dictionary keys
+    headers = list(students[0].keys())
+    ws.append(headers)
+
+    #write student data
+    for student in students:
+        ws.append(list(student.values()))
+
+    #prepare the Excel file in memory
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return send_file(
+        output,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="students.xlsx"
+    )
 
 @app.route('/edit_database')
 def edit_database():
