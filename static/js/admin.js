@@ -35,7 +35,7 @@ function fetchColorScheme() {
         })
         .catch(error => console.error("Error:", error));
 }
-
+//this is an implementation for a route for a browser version 
 function exportToExcel()
 {
     fetch("/export_to_excel")
@@ -57,6 +57,20 @@ function exportToExcel()
         console.error("Export failed:", error);
     });
 }
+
+/*
+function exportToExcel() {
+    if (window.pywebview) {
+        window.pywebview.api.export_to_excel().then(function(message) {
+            alert(message);
+        }).catch(function(error) {
+            console.error("Export failed:", error);
+        });
+    } else {
+        alert("This feature is only available in the desktop app.");
+    }
+}
+*/ 
 
 window.onload = () => {
     fetchColorScheme();
