@@ -35,7 +35,7 @@ function fetchColorScheme() {
         })
         .catch(error => console.error("Error:", error));
 }
-//this is an implementation for a route for a browser version 
+ 
 function exportToExcel()
 {
     fetch("/export_to_excel")
