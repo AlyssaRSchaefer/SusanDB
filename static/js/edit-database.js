@@ -131,6 +131,23 @@ function getAllFields() {
         });
 }
 
+function getAllFieldsUnsorted() {
+    return fetch('/get_student_fields_unsorted')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            fields = data;
+            console.log("Fields loaded:", fields);
+        })
+        .catch(error => {
+            console.error("Error loading fields:", error);
+        });
+}
+
 function removeFieldFromSelect(field) {
     let select = document.getElementById("delete-field-select");
     let optionToRemove = select.querySelector(`option[value="${field}"]`);
@@ -172,12 +189,14 @@ function populateAddStudentForm(){
 }
 
 window.onload = () => {
-    getAllFields().then(() => {
-        if (document.getElementById("delete-field-select")) {
+    if (document.getElementById("delete-field-select")) {
+        getAllFields().then(() => {
             populateDeleteFieldSelect();
-        }
-        else if (document.getElementById("add-student-form")){
+        });
+    }
+    else if (document.getElementById("add-student-form")){
+        getAllFieldsUnsorted().then(() => {
             populateAddStudentForm();
-        }
-    });
+        });
+    }
 };

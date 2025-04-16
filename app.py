@@ -309,18 +309,21 @@ def get_templates():
     
     return templates_dict
 
-def get_all_fields():
+def get_all_fields(sorted):
     db = get_db()
     cursor = db.execute("PRAGMA table_info(students);")
     fields = [row[1] for row in cursor.fetchall()]
-    fields.remove("id")
+    if "id" in fields:
+        fields.remove("id")
+    if sorted:
+        fields.sort()
     return jsonify(fields)
 
 @app.route('/generate_report', methods=['GET', 'POST'])
 def generate_report():
 
     if request.method == 'GET':
-        all_fields = json.loads(get_all_fields().data)
+        all_fields = json.loads(get_all_fields(True).data)
         templates_dict = get_templates()
 
         return render_template('auxiliary/generate_report.html', back_link="/database", templates=templates_dict, all_fields=all_fields)
@@ -413,7 +416,7 @@ def generate_pdf(data, fields, custom_title):
 
 @app.route('/templates')
 def templates():
-    all_fields = json.loads(get_all_fields().data)
+    all_fields = json.loads(get_all_fields(True).data)
     templates_dict = get_templates()
     
     # Pass the dictionary to the template
@@ -422,7 +425,7 @@ def templates():
 @app.route('/new_template', methods=['GET', 'POST'])
 def new_template():
     if request.method == 'GET':
-        columns = json.loads(get_all_fields().data)
+        columns = json.loads(get_all_fields(True).data)
         return render_template('auxiliary/new_template.html', back_link="/templates", columns=columns)
     elif request.method == 'POST':
         # Get JSON data from request
@@ -613,7 +616,7 @@ def process_import_excel_file():
         # Extract field names from the first row (column headers)
         field_names = df.columns.tolist()
 
-        susandb_columns = json.loads(get_all_fields().data)
+        susandb_columns = json.loads(get_all_fields(True).data)
 
         # Pass data to the success template
         return render_template('auxiliary/fields_to_update.html', susandb_columns=susandb_columns, columns=field_names, back_link="/import")
@@ -1114,7 +1117,11 @@ def query_db(sort, filter_params, search_term):
 
 @app.route('/get_student_fields', methods=['GET'])
 def get_student_fields():
-    return get_all_fields()
+    return get_all_fields(True)
+
+@app.route('/get_student_fields_unsorted', methods=['GET'])
+def get_student_fields_unsorted():
+    return get_all_fields(False)
 
 @app.route('/get_student_files', methods=['POST'])
 def get_student_files():
@@ -1155,6 +1162,7 @@ def get_field_values():
     query = f'SELECT DISTINCT "{field}" FROM students;'
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
+    values.sort()
     return jsonify(values)
 
 @app.route('/add_field_to_db', methods=['POST'])
