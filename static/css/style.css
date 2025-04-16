@@ -1229,6 +1229,10 @@ td, th {
     margin-left: 5px;
 }
 
+#excel-export-button {
+    margin-top: 20px;
+}
+
 /* MISC */
 /* Position the icon in the bottom left corner */
 .view-mode-icon {
