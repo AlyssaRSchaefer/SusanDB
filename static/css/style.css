@@ -577,14 +577,21 @@ td, th {
     box-sizing: border-box;
 }
 
-.details-fields, .details-files {
+.details-fields, .details-files, .add-student-fields {
     flex: 1;
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-color: var(--primary-color) var(--secondary-color);
     scrollbar-width: thin;
     overflow-y: auto;
+}
+
+.details-fields, .details-files {
     max-height: 60vh;
+}
+
+.add-student-fields {
+    max-height: 40vh;
 }
 
 #details-upload-button {

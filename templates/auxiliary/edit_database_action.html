@@ -43,9 +43,11 @@
 
 <!-- ADD STUDENT MODE-->
 {% if mode == "add_student" %}
-    <form id="add-student-form" action="/add_student_to_db" method="POST">
+    <div class="add-student-fields">
+        <form id="add-student-form" action="/add_student_to_db" method="POST">
 
-    </form>
+        </form>
+    </div>
     <div class="primary-confirm-button confirm-button" onclick="addStudent()">CONFIRM</div>
 {% endif %}
 
