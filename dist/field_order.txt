@@ -1,0 +1,11 @@
+student_id
+first_name
+last_name
+telephone
+state
+email
+ethnicity
+dob
+gender
+gpa
+hippa
