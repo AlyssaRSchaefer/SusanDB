@@ -20,6 +20,9 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 import requests
 import sys
+import tkinter as tk
+from tkinter import filedialog
+import requests
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
@@ -782,28 +785,33 @@ def download_student_file():
     if not student_id or not file_name:
         return jsonify({'error': 'Missing student_id or file_name'}), 400
 
-    # Get the student folder ID
     student_folder_id = get_or_create_student_folder(session["access_token"], student_id)
     if not student_folder_id:
         return jsonify({'error': 'Failed to retrieve student folder'}), 400
 
-    # Find the file in the student folder
     file_id = find_file_in_folder(session["access_token"], student_folder_id, file_name)
     if not file_id:
         return jsonify({'error': 'File not found in student folder'}), 404
 
-    # Get the file content
     url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/content"
     headers = {"Authorization": f"Bearer {session['access_token']}"}
     response = requests.get(url, headers=headers)
 
-    if response.status_code == 200:
-        # Send the file as a response with the correct content type
-        return Response(response.content,
-                        mimetype='application/octet-stream',
-                        headers={"Content-Disposition": f"attachment;filename={file_name}"})
-    else:
+    if response.status_code != 200:
         return jsonify({'error': f'Error downloading file: {response.status_code}'}), 500
+
+    # Ask user where to save using PyWebview
+    save_path = webview.windows[0].create_file_dialog(
+        webview.SAVE_DIALOG,
+        save_filename=file_name
+    )
+
+    if save_path:
+        with open(save_path, "wb") as f:
+            f.write(response.content)
+        return jsonify({'success': True, 'path': save_path})
+    else:
+        return jsonify({'cancelled': True})
 
 @app.route('/generate_preview', methods=['POST'])
 def generate_preview():

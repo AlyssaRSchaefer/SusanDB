@@ -122,6 +122,7 @@ function deleteFile() {
 }
 
 function downloadSelectedFile() {
+    loading.style.display = "flex";
     fetch('/download_student_file', {
         method: 'POST',
         headers: {
@@ -129,20 +130,12 @@ function downloadSelectedFile() {
         },
         body: JSON.stringify({ student_id: id, file_name: selectedFile })
     })
-    .then(response => response.blob())  // Make sure to return the blob here
-    .then(blob => {
-        if (!blob) {
-            alert("Error: No file received.");
-            return;
-        }
-        
-        // Trigger file download by creating a link and clicking it programmatically
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = selectedFile;
-        link.click();
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = "none";
     })
     .catch(error => {
+        loading.style.display = "none";
         console.error('Error:', error);
         alert('There was an issue downloading the file.');
     });
