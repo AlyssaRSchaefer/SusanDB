@@ -6,7 +6,7 @@ function generateErrorMessage(msg){
 
 function addNewField() {
     loading.style.display = "flex";
-    let name = document.getElementById("add-field-name").value.replaceAll(" ", "_");
+    let name = document.getElementById("add-field-name").value.replaceAll(" ", "_").toLowerCase();
     let defaultValue = document.getElementById("add-field-default").value;
     let addToLayout = document.getElementById("add-field-layout").checked;
 
@@ -21,6 +21,12 @@ function addNewField() {
         loading.style.display = "none";
         return;
     }
+
+    if (name.includes('"')) {
+        generateErrorMessage('Field names cannot contain double quotes (").');
+        loading.style.display = "none";
+        return;
+    }    
 
     clearAddFieldForm(); // You can still clear early
 

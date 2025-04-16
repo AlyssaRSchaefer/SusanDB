@@ -31,21 +31,21 @@
 }
 
 .sky {
-    --primary-color: #77b4c7; /* purple */
+    --primary-color: #77b4c7; 
     --primary-color-highlight: #b4ced5;
     --secondary-color: #f1f5f8; 
     --secondary-color-highlight: #f9f9f9;
-    --tertiary-color: #ffffff; /* white */
-    --quarternary-color: #747474; /* dark gray */
+    --tertiary-color: #ffffff; 
+    --quarternary-color: #747474; 
 }
 
 .bubblegum {
-    --primary-color: #f2bbc8; /* pink */
+    --primary-color: #f2bbc8;
     --primary-color-highlight: #eeb2c2;
     --secondary-color: #f9f0ed; 
     --secondary-color-highlight: #fffbf8;
-    --tertiary-color: #ffffff; /* white */
-    --quarternary-color: #747474; /* dark gray */    
+    --tertiary-color: #ffffff; 
+    --quarternary-color: #747474; 
 }
 
 .strawberry {
@@ -62,8 +62,8 @@
     --primary-color-highlight: #A698A4;
     --secondary-color: #d6d0d0;
     --secondary-color-highlight: #f1eaea;
-    --tertiary-color: #ffffff; /* white */
-    --quarternary-color: #747474; /* dark gray */
+    --tertiary-color: #ffffff;
+    --quarternary-color: #747474;
 }
 
 

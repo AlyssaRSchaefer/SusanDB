@@ -1056,7 +1056,7 @@ def query_db(sort, filter_params, search_term):
     field_order = get_field_order()
 
     # Construct ORDER BY clause
-    order_by_clauses = [f"{field} {direction}" for field, direction in sort.items()]
+    order_by_clauses = [f'"{field}" {direction}' for field, direction in sort.items()]
     order_by_sql = ", ".join(order_by_clauses) if order_by_clauses else "id ASC"
 
     # Process filter parameters
@@ -1064,19 +1064,21 @@ def query_db(sort, filter_params, search_term):
     values = []
     for param in filter_params:
         field, value = param.split("-")  # Assuming format is "field-value"
-        filters.append(f"{field} = ?")
+        filters.append(f'"{field}" = ?')
         values.append(value)
 
     # Add search term filter
     if search_term:
-        search_filter = " OR ".join([f"{field} LIKE ?" for field in field_order])  # Match search term against multiple fields
+        search_filter = " OR ".join([f'"{field}" LIKE ?' for field in field_order])
         filters.append(f"({search_filter})")
         values.extend([f"%{search_term}%" for _ in field_order])  # Add the search term with wildcards for LIKE clause
 
     where_clause = " AND ".join(filters) if filters else "1=1"  # Ensure valid WHERE clause
 
     # Construct the query
-    query = f"SELECT {', '.join(field_order)}, id FROM students WHERE {where_clause} ORDER BY {order_by_sql};"
+    quoted_fields = [f'"{f}"' for f in field_order]
+    query = f"SELECT {', '.join(quoted_fields)}, id FROM students WHERE {where_clause} ORDER BY {order_by_sql};"
+
 
     students = db.execute(query, values).fetchall()
     result = [dict(row) for row in students]
@@ -1122,7 +1124,7 @@ def get_field_values():
     data = request.json
     field = data.get('field')
     db = get_db()
-    query = f"SELECT DISTINCT {field} FROM students;"
+    query = f'SELECT DISTINCT "{field}" FROM students;'
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
     return jsonify(values)
@@ -1135,7 +1137,7 @@ def add_field_to_db():
     add_to_layout = data.get('addToLayout')
 
     db = get_db()
-    query = f"ALTER TABLE students ADD COLUMN \"{field}\" TEXT DEFAULT '{default_value}'"
+    query = f'ALTER TABLE students ADD COLUMN "{field}" TEXT DEFAULT "{default_value}"'
     db.execute(query)
     db.commit()
     db.close()
@@ -1174,7 +1176,7 @@ def delete_field_from_db():
     field = data.get('field')
 
     db = get_db()
-    query = f"ALTER TABLE students DROP COLUMN \"{field}\""
+    query = f'ALTER TABLE students DROP COLUMN "{field}"'
     db.execute(query)
     db.commit()
     db.close()
@@ -1208,7 +1210,7 @@ def add_student_to_db():
         return jsonify({"error": "No data received"}), 400
 
     db = get_db()
-    columns = ", ".join(data.keys())
+    columns = ", ".join(f'"{k.strip("\"")}"' for k in data.keys())
     placeholders = ", ".join("?" for _ in data)
     query = f"INSERT INTO students ({columns}) VALUES ({placeholders})"
     
@@ -1260,8 +1262,8 @@ def update_database_cell():
     db = get_db()
     try:
         # Create the query string dynamically
-        query = f"UPDATE students SET {field} = ? WHERE id = ?"
-        
+        query = f'UPDATE students SET "{field}" = ? WHERE id = ?'
+
         # Execute the query
         db.execute(query, (new_value, id))
         db.commit()
@@ -1295,7 +1297,7 @@ def get_students_by_ids(ids, selected_fields):
     if not selected_fields:  # checks for an empty list
         fields_str = "*"
     else:
-        fields_str = ", ".join(selected_fields)
+        fields_str = ", ".join(f'"{field}"' for field in selected_fields)
     placeholders = ", ".join("?" for _ in ids)
     query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
     cursor=db.execute(query, ids)
