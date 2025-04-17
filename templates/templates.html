@@ -229,6 +229,7 @@ function saveTemplateChanges() {
     });
 
     templatesDict[currentTemplate] = fields; 
+    loading.style.display = "flex";
 
     fetch("/api/update_template", {
         method: "POST",
@@ -240,6 +241,7 @@ function saveTemplateChanges() {
             columns: fields
         })
     }).then(response => response.json()).then(data => {
+        loading.style.display = "none";
         if (data.message) {
             alert("Template updated successfully!");
             hasChanges = false; // Reset change flag after save
@@ -265,6 +267,7 @@ function delete_template(templateName) {
     const userConfirmed = confirm(`Are you sure you want to delete the template "${templateName}"?`);
     if (userConfirmed) {
         // Send a POST request to delete the template
+        loading.style.display = "flex";
         fetch("/api/delete_template", {
             method: "POST",
             headers: {
@@ -274,6 +277,7 @@ function delete_template(templateName) {
         })
         .then(response => response.json())
         .then(data => {
+            loading.style.display = "none";
             if (data.message) {
                 // Delete the row by ID
                 const rowToDelete = document.getElementById(`template-${templateName}`);
@@ -287,6 +291,7 @@ function delete_template(templateName) {
             }
         })
         .catch(error => {
+            loading.style.display = "none";
             console.error("Error:", error);
             alert("An error occurred while deleting the template.");
         });

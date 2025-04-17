@@ -43,10 +43,13 @@ document.getElementById("revert-button").onclick = async function () {
     const confirmed = confirm("Are you sure you want to revert to the last logout? This will overwrite current student data.");
     if (!confirmed) return;
 
+    loading.style.display = "flex";
+
     const response = await fetch("/revert", { method: "POST" });
     const result = await response.json();
     
     if (result.success) {
+        loading.style.display = "none";
         alert("Database reverted successfully.");
     } else {
         alert("No changes were made.");
