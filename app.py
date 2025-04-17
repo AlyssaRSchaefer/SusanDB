@@ -317,6 +317,7 @@ def get_all_fields(sorted):
         fields.remove("id")
     if sorted:
         fields.sort()
+    db.close()
     return jsonify(fields)
 
 @app.route('/generate_report', methods=['GET', 'POST'])
@@ -1041,6 +1042,7 @@ def get_students():
     db = get_db()
     cursor = db.execute("SELECT * FROM students")
     students = [dict(row) for row in cursor.fetchall()]
+    db.close()
     return jsonify(students)
 
 # DATABASE LOGIC
@@ -1113,6 +1115,7 @@ def query_db(sort, filter_params, search_term):
 
     students = db.execute(query, values).fetchall()
     result = [dict(row) for row in students]
+    db.close()
     return result
 
 @app.route('/get_student_fields', methods=['GET'])
@@ -1163,6 +1166,7 @@ def get_field_values():
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
     values.sort()
+    db.close()
     return jsonify(values)
 
 @app.route('/add_field_to_db', methods=['POST'])
@@ -1338,6 +1342,7 @@ def get_students_by_ids(ids, selected_fields):
     query = f"SELECT {fields_str} FROM students WHERE id IN ({placeholders})"
     cursor=db.execute(query, ids)
     student_data = cursor.fetchall()
+    db.close()
     return student_data
 
 def get_student_by_id(id):
