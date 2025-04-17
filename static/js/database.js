@@ -233,6 +233,7 @@ function updateCellData(id, field, newValue) {
     .catch(error => {
         console.error('Error:', error);
         alert('There was an issue updating the data.');
+        alert(error);
     });
 }
 

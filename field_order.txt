@@ -1,9 +1,11 @@
 first_name
+student_id
 last_name
 student_id
 telephone
 state
 email
+city
 ethnicity
 dob
 gender
