@@ -19,6 +19,8 @@ import time
 import pandas as pd
 from werkzeug.utils import secure_filename
 import requests
+import openpyxl
+import io
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url, download_file_from_file_name, update_file_from_file_name
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
@@ -150,22 +152,123 @@ def shrink():
         webview.windows[0].resize(2800, 2000)
     return Response(status=204)  # No Content
 
-# logout
-@app.route('/logout')
-def logout():
+def backup_students_to_excel(access_token):
+    db = get_db()
+    cursor = db.execute("SELECT * FROM students")
+    rows = cursor.fetchall()
+    columns = [description[0] for description in cursor.description]
+
+    # Create Excel file in memory
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Students"
+
+    # Write header
+    ws.append(columns)
+
+    # Write data rows
+    for row in rows:
+        ws.append([row[col] for col in columns])
+
+    # Save to in-memory file
+    excel_stream = io.BytesIO()
+    wb.save(excel_stream)
+    excel_stream.seek(0)
+
+    # Upload using the existing function
+    return update_file_from_file_name(
+        access_token,
+        target_file_name="db_backup.xlsx",
+        updated_content=excel_stream.getvalue()
+    )
+
+def revert_students_from_backup(access_token):
+    # Step 1: Download the backup file from OneDrive
+    content = download_file_from_file_name(access_token, "db_backup.xlsx")
+    if not content:
+        flash("Failed to download backup.", "danger")
+        return False
+
+    # Step 2: Parse the Excel content
+    wb = openpyxl.load_workbook(filename=io.BytesIO(content))
+    ws = wb.active
+    headers = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+
+    backup_data = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        backup_data.append(dict(zip(headers, row)))
+
+    db = get_db()
+
+    # Step 3: Load current DB data
+    cursor = db.execute("SELECT * FROM students")
+    current_rows = cursor.fetchall()
+    current_data = {row["id"]: dict(row) for row in current_rows}
+    backup_data_map = {row["id"]: row for row in backup_data}
+
+    changes_made = False
+
+    # Step 4: Handle updates and inserts
+    for student_id, backup_row in backup_data_map.items():
+        current_row = current_data.get(student_id)
+
+        if not current_row:
+            # INSERT new student
+            placeholders = ", ".join("?" for _ in backup_row)
+            quoted_columns = ", ".join(f'"{col}"' for col in backup_row)
+            insert_query = f"INSERT INTO students ({quoted_columns}) VALUES ({placeholders})"
+            db.execute(insert_query, list(backup_row.values()))
+            changes_made = True
+        elif backup_row != current_row:
+            # UPDATE existing student
+            set_clause = ", ".join(f'"{key}"=?' for key in backup_row if key != "id")
+            update_query = f"UPDATE students SET {set_clause} WHERE \"id\"=?"
+            update_values = [backup_row[key] for key in backup_row if key != "id"] + [student_id]
+            db.execute(update_query, update_values)
+            changes_made = True
+
+    # Step 5: Handle deletions
+    for student_id in current_data:
+        if student_id not in backup_data_map:
+            db.execute('DELETE FROM students WHERE "id"=?', (student_id,))
+            changes_made = True
+
+    db.commit()
+
+    if changes_made:
+        flash("Database reverted to match backup.", "success")
+        return True
+    else:
+        flash("No changes to revert.", "info")
+        return False
+
+
+@app.route("/revert", methods=["POST"])
+def revert():
+    success = revert_students_from_backup(session["access_token"])
+    return jsonify({"success": success})
+
+def generic_logout_functions():
+    # save backup as excel
+    backup_students_to_excel(session["access_token"])
+
+    # clear everything
     global global_mode
     delete_lock_file(global_mode)
     session.clear()
     global_mode=None
+    return None
+
+# logout
+@app.route('/logout')
+def logout():
+    generic_logout_functions()
     return redirect(url_for('index'))
 
 # logout AND close app
 @app.route('/logout_from_x')
 def logout_from_x():
-    global global_mode
-    delete_lock_file(global_mode)
-    session.clear()
-    global_mode=None
+    generic_logout_functions()
     webview.windows[0].destroy() #closes the window
     return Response(status=204)  # No Content
         

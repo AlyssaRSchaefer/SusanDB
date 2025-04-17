@@ -38,3 +38,13 @@ function fetchColorScheme() {
 window.onload = () => {
     fetchColorScheme();
 };
+
+document.getElementById("revert-button").onclick = async function() {
+    const response = await fetch("/revert", { method: "POST" });
+    const result = await response.json();
+    if (result.success) {
+        alert("Database reverted successfully.");
+    } else {
+        alert("No changes were made.");
+    }
+};

@@ -1,9 +1,10 @@
-student_id
 first_name
+student_id
 last_name
 telephone
 state
 email
+city
 ethnicity
 dob
 gender
