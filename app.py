@@ -1,4 +1,4 @@
-from flask import Flask, g, session, render_template, jsonify, request, Response
+from flask import Flask, g, session, render_template, jsonify, request, Response, send_file
 from dotenv import load_dotenv
 import msal
 import sqlite3
@@ -7,7 +7,7 @@ import threading
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 import secrets
 import tempfile
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook 
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 import re
@@ -19,7 +19,7 @@ import time
 import pandas as pd
 from werkzeug.utils import secure_filename
 import requests
-import openpyxl
+from tkinter import filedialogimport openpyxl
 import io
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url, download_file_from_file_name, update_file_from_file_name
@@ -302,6 +302,42 @@ def database():
 @app.route('/admin')
 def admin():
     return render_template("admin.html")
+
+@app.route('/export_to_excel')
+def export_to_excel():
+    try:
+        
+        students = fetch_students() 
+
+        if not students:
+            return "No students found"
+
+        #open Save File dialog using PyWebView
+        filepath = webview.windows[0].create_file_dialog(webview.SAVE_DIALOG, save_filename='students.xlsx')
+
+        if not filepath:
+            return "Export canceled"
+
+        #create Excel file
+        wb = Workbook()
+        ws = wb.active
+        headers = list(students[0].keys())
+        ws.append(headers)
+
+        for student in students:
+            ws.append(list(student.values()))
+
+        wb.save(filepath)
+        return f"File saved to:\n{filepath}"
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def fetch_students():
+    db = get_db()
+    cursor = db.execute("SELECT * FROM students")
+    return [dict(row) for row in cursor.fetchall()]
+
 
 @app.route('/edit_database')
 def edit_database():

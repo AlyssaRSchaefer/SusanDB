@@ -1,5 +1,6 @@
 const saveButton = document.getElementById("admin-save-button");
 const colorSchemeSelect = document.getElementById("admin-color-select");
+const exportButton = document.getElementById("excel-export-button")
 
 colorSchemeSelect.addEventListener("change", function() {
     document.body.className = this.value;
@@ -34,6 +35,42 @@ function fetchColorScheme() {
         })
         .catch(error => console.error("Error:", error));
 }
+ 
+function exportToExcel()
+{
+    fetch("/export_to_excel")
+    .then(response => {
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "students.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    })
+    .catch(error => {
+        console.error("Export failed:", error);
+    });
+}
+
+/*
+function exportToExcel() {
+    if (window.pywebview) {
+        window.pywebview.api.export_to_excel().then(function(message) {
+            alert(message);
+        }).catch(function(error) {
+            console.error("Export failed:", error);
+        });
+    } else {
+        alert("This feature is only available in the desktop app.");
+    }
+}
+*/ 
 
 window.onload = () => {
     fetchColorScheme();
