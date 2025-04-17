@@ -89,6 +89,7 @@ document.getElementById("revert-button").onclick = async function () {
         loading.style.display = "none";
         alert("Database reverted successfully.");
     } else {
+        loading.style.display = "none";
         alert("No changes were made.");
     }
 };

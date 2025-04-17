@@ -12,3 +12,4 @@ gender
 gpa
 hippa
 ft/pt
+favorite_color

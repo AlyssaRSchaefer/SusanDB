@@ -57,6 +57,15 @@
     --quarternary-color: #7D5B47;
 }
 
+.amethyst {
+    --primary-color: #AE8FD9;
+    --primary-color-highlight: #8E6BBF;
+    --secondary-color: #DED0F2;
+    --secondary-color-highlight: #D2BBF2;
+    --tertiary-color: #ffffff;
+    --quarternary-color: #7D5B47;
+}
+
 .viewing {
     --primary-color: #716671;
     --primary-color-highlight: #A698A4;
