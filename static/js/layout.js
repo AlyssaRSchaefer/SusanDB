@@ -5,9 +5,14 @@ let hasChanges = false;
 let sortableInstance = null;
 
 function openFieldPopup() {
+    if (fields.length === 0) {
+        fetchLayout(); // or await it with refactor
+    }
+
     populateFieldSelect();
     document.getElementById("field-popup").style.display = "flex";
 }
+
 
 function addNewField() {
     const selectedField = document.getElementById("new-field-select").value;

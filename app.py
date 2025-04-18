@@ -1304,7 +1304,6 @@ def get_field_values():
     query = f'SELECT DISTINCT "{field}" FROM students;'
     cursor = db.execute(query)
     values = [row[0] for row in cursor.fetchall()]  # Extract values
-    values.sort()
     db.close()
     return jsonify(values)
 

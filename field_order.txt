@@ -1,7 +1,7 @@
+program_status
+student_id
 first_name
-student_id
 last_name
-student_id
 telephone
 state
 email
