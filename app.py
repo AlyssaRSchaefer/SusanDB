@@ -540,13 +540,28 @@ def generate_pdf(data, fields, custom_title):
 
         pdf.set_font("Times", size=12)
 
-        for field, value in zip(fields, student):
-            pdf.set_font("Times", style="B", size=12)
-            pdf.cell(60, 10, field, border=1)
+        line_height = 10
+        col1_width = 60
 
+        for field, value in zip(fields, student):
+            # remember where this “row” starts
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+
+            # 1) Field name box (wraps if too long)
+            pdf.set_font("Times", style="B", size=12)
+            pdf.multi_cell(col1_width, line_height, field, border=1) 
+            field_y_end = pdf.get_y()
+
+            # 2) Value box (also wraps)
+            pdf.set_xy(x_start + col1_width, y_start)
             pdf.set_font("Times", size=12)
-            pdf.multi_cell(0, 10, str(value), border=1)
-            pdf.ln(0)
+            pdf.multi_cell(0, line_height, str(value), border=1) 
+            value_y_end = pdf.get_y()
+
+            # 3) Move down to the greatest of the two box-heights
+            y_end = max(field_y_end, value_y_end)
+            pdf.set_y(y_end) # Use set_y directly to move to the correct y-coordinate
 
         pdf.ln(10)
 

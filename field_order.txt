@@ -4,7 +4,6 @@ student_id
 telephone
 state
 email
-city
 ethnicity
 dob
 gender
@@ -12,3 +11,4 @@ gpa
 hippa
 ft/pt
 favorite_color
+loooooooooooooooooooooooooooooooooooooooooooooooooooong_field_name

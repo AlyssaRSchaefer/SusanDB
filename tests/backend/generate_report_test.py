@@ -1,174 +1,87 @@
-# import unittest
-# from unittest.mock import patch, MagicMock
-# from flask import Flask
-# import json
-# import os
-# import sys
-# from datetime import datetime
+import unittest
+import tempfile
+import shutil
+import os
+from unittest.mock import patch, MagicMock
 
-# # Get the directory of the current test file
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# # Get the parent directory of 'tests' (which should contain 'app.py')
-# parent_dir = os.path.dirname(os.path.dirname(current_dir))
-# # Add the parent directory to sys.path
-# sys.path.insert(0, parent_dir)
+import sys
+import os
 
-# from app import app  # Import your Flask app
-# from fpdf import FPDF
+# Get the directory of the current test file
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Get the parent directory of 'tests' (which should contain 'app.py')
+parent_dir = os.path.dirname(os.path.dirname(current_dir))
+# Add the parent directory to sys.path
+sys.path.insert(0, parent_dir)
 
-# class GenerateReportAPITestCase(unittest.TestCase):
+from app import app
 
-#     def setUp(self):
-#         self.client = app.test_client()
-#         app.config['TESTING'] = True
-#         app.config['SECRET_KEY'] = 'test_secret_key' # Required for sessions
+from fpdf import FPDF
 
-#     def tearDown(self):
-#         pass
+class GenerateReportAPITestCase(unittest.TestCase):
 
-#     def mock_get_students_by_ids(self, student_ids, selected_fields):
-#         mock_data = {
-#             "1": ["Alice", "10"],
-#             "2": ["Bob", "11"],
-#             "3": ["Charlie", "12"],
-#         }
-#         return [mock_data.get(sid) for sid in student_ids if sid in mock_data]
+    def setUp(self):
+        # Create a temp dir for all our PDF outputs
+        self.tempdir = tempfile.mkdtemp()
+        self.client = app.test_client()
+        app.config['TESTING'] = True
+        app.config['SECRET_KEY'] = 'test_secret_key'  # for sessions
 
-#     def mock_get_students_by_ids_long_value(self, student_ids, selected_fields):
-#         mock_data = {
-#             "1": ["This is a veeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeery long value"],
-#         }
-#         return [mock_data.get(sid) for sid in student_ids if sid in mock_data]
+    def tearDown(self):
+        # Remove the temp dir and everything in it
+        shutil.rmtree(self.tempdir)
 
-#     def mock_get_students_by_ids_invalid(self, student_ids, selected_fields):
-#         mock_data = {
-#             "1": ["Alice"],
-#             "3": ["Charlie"],
-#         }
-#         return [mock_data.get(sid) for sid in student_ids if sid in mock_data]
+    # mocks for get_students_by_ids
+    def mock_get_students_by_ids(self, student_ids, selected_fields):
+        mock_data = {
+            "1": ["Alice", "10"],
+            "2": ["Bob", "11"],
+            "3": ["Charlie", "12"],
+        }
+        return [mock_data.get(sid) for sid in student_ids]
 
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_one_student_selected(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_one.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
+    def mock_get_students_by_ids_invalid(self, student_ids, selected_fields):
+        # only "1" is valid here
+        return [student_ids and ["Alice"]]
 
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
-#             response = self.client.post('/generate_report?ids[]=1', json={"fields": ["Name", "Grade"]})
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-#             os.remove(mock_file_path)
+    @patch('app.webview')
+    @patch('os.startfile')
+    def test_generate_report_one_student_selected(self, mock_startfile, mock_webview):
+        # mock the file dialog to point inside our tempdir
+        mock_path = os.path.join(self.tempdir, "one.pdf")
+        mock_webview.windows = [MagicMock()]
+        mock_webview.windows[0].create_file_dialog.return_value = mock_path
 
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_multiple_students_selected(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_multiple.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
+        with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
+            resp = self.client.post(
+                '/generate_report?ids[]=1',
+                json={"fields": ["Name", "Grade"]}
+            )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['report_path'], mock_path)
+        mock_startfile.assert_called_once_with(mock_path)
+        self.assertTrue(os.path.exists(mock_path))
 
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
-#             response = self.client.post('/generate_report?ids[]=1&ids[]=2', json={"fields": ["Name"]})
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-#             os.remove(mock_file_path)
+    @patch('app.webview')
+    @patch('os.startfile')
+    def test_generate_report_multiple_students_selected(self, mock_startfile, mock_webview):
+        mock_path = os.path.join(self.tempdir, "multi.pdf")
+        mock_webview.windows = [MagicMock()]
+        mock_webview.windows[0].create_file_dialog.return_value = mock_path
 
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_only_valid_student_ids_passed(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_valid_ids.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
+        with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
+            resp = self.client.post(
+                '/generate_report?ids[]=1&ids[]=2',
+                json={"fields": ["Name"]}
+            )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['report_path'], mock_path)
+        mock_startfile.assert_called_once_with(mock_path)
+        self.assertTrue(os.path.exists(mock_path))
 
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
-#             response = self.client.post('/generate_report?ids[]=1&ids[]=3', json={"fields": ["Name"]})
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-#             os.remove(mock_file_path)
-
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_invalid_student_id_passed(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_invalid_id.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
-
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids_invalid):
-#             response = self.client.post('/generate_report?ids[]=1&ids[]=99', json={"fields": ["Name"]})
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-#             os.remove(mock_file_path)
-
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_title_passed(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_title.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
-
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
-#             response = self.client.post('/generate_report?ids[]=1', json={"fields": ["Name"], "title": "Custom Report Title"})
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-
-#             # Basic check for title in PDF content
-#             with open(mock_file_path, 'rb') as f:
-#                 pdf_content = f.read().decode('latin-1')
-#                 self.assertIn("Custom Report Title", pdf_content)
-#             os.remove(mock_file_path)
-
-#     @patch('app.webview')
-#     @patch('os.startfile')
-#     def test_generate_report_title_not_passed(self, mock_startfile, mock_webview):
-#         mock_file_path = "/tmp/test_report_no_title.pdf"
-#         mock_webview.windows = [MagicMock()]
-#         mock_webview.windows[0].create_file_dialog.return_value = mock_file_path
-
-#         with patch('app.get_students_by_ids', side_effect=self.mock_get_students_by_ids):
-#             response = self.client.post('/generate_report?ids[]=1', json={"fields": ["Name"]})
-#             print(response.data.decode('utf-8'))
-#             self.assertEqual(response.status_code, 200)
-#             data = response.get_json()
-#             self.assertTrue(data['success'])
-#             self.assertEqual(data['message'], "Report generated successfully")
-#             self.assertEqual(data['report_path'], mock_file_path)
-#             mock_webview.windows[0].create_file_dialog.assert_called_once()
-#             mock_startfile.assert_called_once_with(mock_file_path)
-#             self.assertTrue(os.path.exists(mock_file_path))
-
-#             # Basic check for absence of a specific custom title
-#             with open(mock_file_path, 'rb') as f:
-#                 pdf_content = f.read().decode('latin-1')
-#                 # Assuming no specific title string is used if not passed
-#                 pass
-#             os.remove(mock_file_path)
+if __name__ == '__main__':
+    unittest.main()
