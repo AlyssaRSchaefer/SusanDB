@@ -102,12 +102,14 @@
     <div class="login-box">
       <form action="{{ url_for('login') }}" method="get" onsubmit="showLoading()">
         <button class="primary-button" style="padding: 10px;" id="loginButton" type="submit">LOGIN WITH MICROSOFT</button>
-        <div id="loadingSpinner" class="loading"></div>
+        <div id="loadingSpinner" class="loading" style="margin-left: auto; margin-right: auto;"></div>
+        <button class="primary-button" style="margin-top: 10px; padding: 10px; display: none; background-color: rgb(205, 205, 205); border: none;" id="loadingButton" type="button">Please complete login in browser. Click here if login failed.</button>
       </form>
     </div>
 
+
     {% if access_denied %}
-      <div class="access-denied-box">
+      <div class="access-denied-box" id="access-denied-box">
         <p>Sorry {{ name }}, but you do not have access to this application. Please sign in with a different account.</p>
       </div>
     {% endif %}
@@ -120,11 +122,18 @@
     function showLoading() {
       document.getElementById("loginButton").style.display = "none";
       document.getElementById("loadingSpinner").style.display = "block";
+      document.getElementById("loadingButton").style.display = "block";
       document.getElementById("access-denied-box").style.display = "none";
     }
 
     document.getElementById('closeButton').addEventListener('click', function() {
         fetch('/exit_app'); // Call the Flask exit_app route
+    });
+
+    document.getElementById('loadingButton').addEventListener('click', function() {
+        document.getElementById("loginButton").style.display = "block";
+        document.getElementById("loadingSpinner").style.display = "none";
+        document.getElementById("loadingButton").style.display = "none";
     });
   </script>
 </body>
