@@ -975,6 +975,7 @@ def download_student_file():
 def generate_preview():
     try:
         # Parse JSON data from the request
+        change_applied= False
         data = request.get_json()
         selected_excel_fields = data.get('selectedExcelFields', [])
         selected_susandb_fields = data.get('selectedSusanDBFields', [])
@@ -989,6 +990,7 @@ def generate_preview():
         cursor = db.cursor()
 
         preview_updates = []
+        new_students    = []
 
         # Loop through each row in the Excel file
         for _, row in df.iterrows():
@@ -1008,43 +1010,86 @@ def generate_preview():
                 continue
 
             # Fetch student record matching the WHERE clause
-            query = f"SELECT student_id, first_name, last_name, {', '.join(selected_susandb_fields)} FROM students WHERE {' AND '.join(where_conditions)}"
+            query = (
+                f"SELECT student_id, first_name, last_name, "
+                f"{', '.join(selected_susandb_fields)} "
+                f"FROM students WHERE {' AND '.join(where_conditions)}"
+            )
             cursor.execute(query, where_params)
             student_data = cursor.fetchone()
 
-            # Skip if no matching student is found
-            if not student_data:
-                continue
+            if student_data:
+                # --- EXISTING STUDENT: build changes list ---
+                student_id, first_name, last_name, *current_values = student_data
 
-            # Extract student details and current DB values
-            student_id, first_name, last_name, *current_values = student_data
+                changes = []
+                for excel_field, db_field, current_value in zip(
+                    selected_excel_fields,
+                    selected_susandb_fields,
+                    current_values
+                ):
+                    new_value = str(row[excel_field])
+                    changes.append({
+                        "field":         db_field,
+                        "current_value": str(current_value),
+                        "new_value":     new_value,
+                        "unchanged":     str(current_value) == new_value
+                    })
+                    if str(current_value) != new_value:
+                        change_applied = True
 
-            # Track all changes (differences and unchanged)
-            changes = []
-            for excel_field, db_field, current_value in zip(selected_excel_fields, selected_susandb_fields, current_values):
-                new_value = str(row[excel_field])
-
-                # Include both changes and unchanged fields
-                changes.append({
-                    "field": db_field,
-                    "current_value": str(current_value),
-                    "new_value": new_value,
-                    "unchanged": str(current_value) == new_value  # Mark unchanged rows
+                preview_updates.append({
+                    "student_id": student_id,
+                    "first_name": first_name,
+                    "last_name":  last_name,
+                    "changes":    changes
                 })
 
-            # Append the full student update entry (even if no actual changes)
-            preview_updates.append({
-                "student_id": student_id,
-                "first_name": first_name,
-                "last_name": last_name,
-                "changes": changes
-            })
+            else:
+                # --- NEW STUDENT: build raw_values from mapping_keys AND selected fields ---
+                raw_values = {}
+
+                # 1) From mapping_keys
+                for rule in mapping_keys:
+                    excel_fields   = rule.get("excel", [])
+                    susandb_fields = rule.get("susandb", [])
+                    for excel_col, db_col in zip(excel_fields, susandb_fields):
+                        if excel_col in row.index:
+                            raw_values[db_col] = str(row[excel_col])
+
+                # 2) Also include any explicitly selected fields
+                for excel_col, db_col in zip(selected_excel_fields, selected_susandb_fields):
+                    if excel_col in row.index:
+                        raw_values[db_col] = str(row[excel_col])
+
+                # 3) Pull out identity columns
+                student_id = raw_values.get("student_id", "")
+                first_name = raw_values.get("first_name", "")
+                last_name  = raw_values.get("last_name", "")
+
+                # 4) Remove them so raw_values only has the “other” fields
+                for key in ("student_id", "first_name", "last_name"):
+                    raw_values.pop(key, None)
+
+                # 5) Append in the format your JS expects
+                new_students.append({
+                    "student_id": student_id,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "raw_values": raw_values
+                })
+
 
         # Close the DB connection
         db.close()
+        print(new_students)
 
-        # Return all updates, with unchanged fields labeled
-        return jsonify({"preview": preview_updates}), 200
+        # Return both lists
+        return jsonify({
+            "preview":      preview_updates,
+            "new_students": new_students,
+            "change_applied": change_applied
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1053,53 +1098,79 @@ def generate_preview():
 @app.route('/update_db_from_excel', methods=['POST'])
 def update_db_from_excel():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         selected_updates = data.get('updates', [])
+        selected_new      = data.get('new_students', [])
 
-        if not selected_updates:
-            return jsonify({"error": "No updates selected"}), 400
+        if not selected_updates and not selected_new:
+            return jsonify({"error": "No updates or new students selected"}), 400
 
         db = get_db()
-        updated_rows = 0
+        updated_rows  = 0
+        inserted_rows = 0
 
-        # Apply only selected changes
+        # 1) APPLY UPDATES
         for update in selected_updates:
             student_id = update.get('student_id')
-            changes = update.get('changes', [])
+            changes    = update.get('changes', [])
 
             # Build SET clause
-            set_clause_parts = []
-            update_params = []
-
+            set_parts = []
+            params    = []
             for change in changes:
-                field = change.get('field')
+                field     = change.get('field')
                 new_value = change.get('new_value')
-
                 if field and new_value is not None:
-                    set_clause_parts.append(f"{field} = ?")
-                    update_params.append(str(new_value))
+                    set_parts.append(f"{field} = ?")
+                    params.append(str(new_value))
 
-            if not set_clause_parts:
+            if not set_parts:
                 continue
 
-            # Build the query
-            query = f"UPDATE students SET {', '.join(set_clause_parts)} WHERE student_id = ?"
-            update_params.append(student_id)
-
-            # Execute the update query
-            cursor = db.execute(query, update_params)
+            params.append(student_id)
+            sql = f"UPDATE students SET {', '.join(set_parts)} WHERE student_id = ?"
+            cursor = db.execute(sql, params)
             updated_rows += cursor.rowcount
 
-        # Commit changes
+        # 2) INSERT NEW STUDENTS
+        for newstu in selected_new:
+            # Must have at least the ID, first, and last name
+            sid   = newstu.get('student_id')
+            fname = newstu.get('first_name')
+            lname = newstu.get('last_name')
+            raw   = newstu.get('raw_values', {})
+
+            # Merge all columns: student_id, first_name, last_name, plus any extras
+            cols   = ['student_id', 'first_name', 'last_name'] + list(raw.keys())
+            vals   = [sid, fname, lname] + [raw[k] for k in raw.keys()]
+            ph     = ','.join('?' for _ in cols)
+
+            sql = f"INSERT INTO students ({','.join(cols)}) VALUES ({ph})"
+            print(sql)
+            cursor = db.execute(sql, vals)
+            inserted_rows += cursor.rowcount
+
+        # 3) COMMIT & CLEAN UP
         db.commit()
         db.close()
-        save_db()
+        save_db()  # your existing persistence hook
 
+        # 4) RETURN SUMMARY
         return jsonify({
-            "message": f"Database update completed. {updated_rows} changes applied successfully."
+            "message": (
+                f"Database update completed. "
+                f"{updated_rows} row(s) updated, "
+                f"{inserted_rows} new student(s) inserted."
+            )
         }), 200
 
     except Exception as e:
+        # Roll back on error
+        try:
+            db.rollback()
+            db.close()
+        except:
+            pass
         return jsonify({"error": str(e)}), 500
 
 @app.route('/layout')

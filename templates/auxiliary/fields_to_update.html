@@ -46,7 +46,7 @@
 
     <!-- Rules Table -->
     <div class="rules-table-container import-table-container" style="width: 100%;">
-        <table class="rules-table import-table" style="width: 100%;">
+        <table class="rules-table import-table" id="rules-table" style="width: 100%;">
             <thead>
                 <tr>
                     <th>Excel Fields</th>
@@ -124,28 +124,50 @@
 </div>
 
 <!-- THIS IS THE FOURTH POP-UP. THE USER WILL CONFIRM UPDATES TO BE MADE-->
-<div id="confirm-update-section" style="display: none; flex-direction: column; align-items: center;">
+<div id="confirm-update-section" style="display: none; flex-direction: column; align-items: center; gap: 2rem;">
     <h1>SELECT CHANGES</h1>
+  
+    <!-- EXISTING-STUDENT UPDATES -->
     <div class="templates-table-container">
-        <table class="import-table">
-            <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>First Name</th>
-                    <th>Last Name</th>
-                    <th>Proposed Change</th>
-                    <th>
-                        <label>
-                            <input type="checkbox" id="select-all-checkbox">
-                        </label>
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="preview-table-body"></tbody>
-        </table>
+      <table class="import-table" id="existing-students-table">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Proposed Change</th>
+            <th>
+              <label><input type="checkbox" id="select-all-checkbox">Select All</label>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="preview-table-body"></tbody>
+      </table>
     </div>
-    <button id="finalSubmitButton" style="height: auto;" class="primary-button text">SUBMIT</button>
-</div>
+  
+    <!-- NEW-STUDENT INSERTIONS -->
+    <div class="templates-table-container" id="new-students-table-container">
+        <center><h3 style="font-family: var(--font-primary); color: var(--primary-color-highlight); margin-right: auto; margin-left: auto;">NEW STUDENTS</h3></center>
+      <table class="import-table" id="new-students-table">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Imported Data</th>
+            <th>
+              <label><input type="checkbox" id="select-all-new">Select All</label>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="new-students-table-body"></tbody>
+      </table>
+    </div>
+  
+    <!-- FINAL SUBMIT -->
+    <button id="finalSubmitButton" class="primary-button">SUBMIT</button>
+  </div>
+  
 <!-- NEED THIS TO PASS TO THE JS FILE-->
 <div id="data-holder" 
      data-columns='{{ columns | tojson | safe }}' 
