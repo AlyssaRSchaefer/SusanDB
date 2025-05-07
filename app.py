@@ -22,6 +22,7 @@ import requests
 import openpyxl
 import io
 import sys
+from werkzeug.exceptions import HTTPException
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url, download_file_from_file_name, update_file_from_file_name
 from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
@@ -77,6 +78,20 @@ global_last_update_time = 0
 
 if not all([CLIENT_ID, AUTHORITY, SCOPES, REDIRECT_URI]):
     raise ValueError("Missing required environment variables. Check your .env file.")
+
+# CATCHES ALL unhandled exceptions and redirects user
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # If it's an HTTP error (like 404), don't flash it
+    if isinstance(e, HTTPException):
+        return e  # Let Flask handle it normally
+    
+    flash(f'An error occurred: {str(e)}', 'danger')
+    if global_mode:
+        return redirect(request.referrer or url_for('database'))
+    else:
+        # return to index if not logged in
+        return redirect(url_for('index')) 
 
 # running this at login will allow info to be stored in session so stuff does not have to constantly be reloaded
 def run_at_login():
