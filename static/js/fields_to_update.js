@@ -3,7 +3,6 @@ let selectedExcelFields = [];
 let selectedSusanDBFields = [];
 let mappingRules = [];
 let previewUpdates = [];
-let newStudents = [];
 
 const dataHolder = document.getElementById('data-holder');
 const columns = JSON.parse(dataHolder.getAttribute('data-columns'));
@@ -53,13 +52,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById("select-all-checkbox").addEventListener("change", function () {
         const checked = this.checked;
         document.querySelectorAll("#preview-table-body input[type='checkbox']").forEach(checkbox => {
-            checkbox.checked = checked;
-        });
-    });
-
-    document.getElementById("select-all-new").addEventListener("change", function () {
-        const checked = this.checked;
-        document.querySelectorAll("#new-students-table-body input[type='checkbox']").forEach(checkbox => {
             checkbox.checked = checked;
         });
     });
@@ -309,29 +301,7 @@ function submitMappingData() {
             alert("Error generating preview: " + data.error);
         } else {
             previewUpdates = data.preview
-            newStudents = data.new_students;
-            if(data.change_applied) {
-                displayPreviewTable(data.preview);  // Call function to show updates
-            } else {
-                // Get the <tbody> and inject a single “None” row
-                const body = document.getElementById("preview-table-body");
-                body.innerHTML = `
-                    <tr>
-                    <td colspan="5" style="text-align: center; opacity: 0.7;">
-                        None
-                    </td>
-                    </tr>
-                `;
-            }
-            if (data.new_students.length != 0) {
-                displayNewStudentsTable(data.new_students); // Call function to show new students
-            } else {
-                document.getElementById("new-students-table-container").style.display = "none";
-            }
-            if(!data.change_applied && data.new_students.length == 0) {
-                alert("No changes detected in the selected fields.");
-                window.location.href = "/database";
-            }
+            displayPreviewTable(data.preview);  // Call function to show updates
         }
     })
     .catch(error => {
@@ -390,86 +360,38 @@ function displayPreviewTable(previewUpdates) {
     document.getElementById("map-data").style.display = "none";
 }
 
-function displayNewStudentsTable(newStudents) {
-    const tableBody = document.getElementById("new-students-table-body");
-    tableBody.innerHTML = "";
-  
-    newStudents.forEach((student, idx) => {
-      // Build a little HTML block for the raw_values map
-      let rawHtml = "";
-      for (const [field, val] of Object.entries(student.raw_values)) {
-        rawHtml += `<strong>${field}:</strong> ${val}<br>`;
-      }
-  
-      // Each row gets a checkbox so the user can pick which new students to insert
-      const rowHtml = `
-        <tr>
-          <td>${student.student_id}</td>
-          <td>${student.first_name}</td>
-          <td>${student.last_name}</td>
-          <td>${rawHtml}</td>
-          <td style="text-align: center;">
-            <input type="checkbox"
-                   class="new-student-checkbox"
-                   data-new-index="${idx}">
-          </td>
-        </tr>
-      `;
-      tableBody.innerHTML += rowHtml;
-    });
-    document.getElementById("confirm-update-section").style.display = "flex";
-    document.getElementById("map-data").style.display = "none";
-}  
-
-
-
 document.getElementById("finalSubmitButton").addEventListener("click", function() {
-    // 1) Collect selected updates
-    const selectedUpdates = Array.from(
-      document.querySelectorAll(".update-checkbox:checked")
-    ).map(cb => {
-      const idx = parseInt(cb.getAttribute("data-student-index"), 10);
-      return previewUpdates[idx];
+    let selectedUpdates = [];
+
+    document.querySelectorAll(".update-checkbox:checked").forEach(checkbox => {
+        let studentIndex = checkbox.getAttribute("data-student-index");
+        selectedUpdates.push(previewUpdates[studentIndex]); // Add the entire student update
     });
-  
-    // 2) Collect selected new students
-    const selectedNew = Array.from(
-      document.querySelectorAll(".new-student-checkbox:checked")
-    ).map(cb => {
-      const idx = parseInt(cb.getAttribute("data-new-index"), 10);
-      return newStudents[idx];
-    });
-  
-    // 3) Require at least one
-    if (selectedUpdates.length === 0 && selectedNew.length === 0) {
-      alert("No changes or new students selected.");
-      return;
+
+    if (selectedUpdates.length === 0) {
+        alert("No updates selected.");
+        return;
     }
-  
-    // 4) Send both arrays together
+
     fetch('/update_db_from_excel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        updates:      selectedUpdates,
-        new_students: selectedNew
-      })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates: selectedUpdates })
     })
     .then(response => response.json())
     .then(data => {
-      if (data.error) {
-        alert("Error updating database: " + data.error);
-      } else {
-        alert(data.message);
-        window.location.href = "/database";
-      }
+        if (data.error) {
+            alert("Error updating database: " + data.error);
+        } else {
+            alert(data.message);
+            window.location.href = "/database";
+        }
     })
     .catch(error => {
-      console.error('Fetch error:', error);
-      alert('An error occurred while updating the database. Please try again.');
+        console.error('Fetch error:', error);
+        alert('An error occurred while updating the database.');
     });
-  });
-  
+});
 
 function toggleSelectAll() {
     let checkboxes = document.querySelectorAll('.fields-to-update-checkbox');
