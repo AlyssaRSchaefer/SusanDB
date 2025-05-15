@@ -1,3 +1,13 @@
 first_name
 last_name
-grade
+student_id
+telephone
+state
+email
+ethnicity
+dob
+gender
+gpa
+hippa
+ft/pt
+favorite_color
