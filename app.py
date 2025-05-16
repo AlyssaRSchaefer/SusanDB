@@ -154,7 +154,7 @@ def login():
 
             if is_lock_file=="ACCESS_DENIED":
                 return render_template("login.html", access_denied=True)
-            elif is_lock_file==True:
+            elif is_lock_file:
                 timestamp = is_lock_file[0]
                 last_user = is_lock_file[1]
                 dt = datetime.fromtimestamp(int(timestamp))
