@@ -1410,6 +1410,8 @@ def get_field_values():
 
 @app.route('/add_field_to_db', methods=['POST'])
 def add_field_to_db():
+    if 'user' not in session:
+        return jsonify({"error": "Forbidden"}), 403
     data = request.json
     field = data.get('field')
     default_value = data.get('default')
@@ -1451,9 +1453,12 @@ def add_field_to_db():
 
 @app.route('/delete_field_from_db', methods=['POST'])
 def delete_field_from_db():
+    if 'user' not in session:
+        return jsonify({"error": "Forbidden"}), 403
     data = request.json
     field = data.get('field')
-
+    if not field:
+        return jsonify({"error": "Field name is required."}), 400
     db = get_db()
     query = f'ALTER TABLE students DROP COLUMN "{field}"'
     db.execute(query)
