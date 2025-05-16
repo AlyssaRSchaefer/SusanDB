@@ -1,6 +1,9 @@
 # SusanDB
 Spring 2025 Capstone Project
 
+## Detailed User Documentation & Initialization
+- https://mailmissouri-my.sharepoint.com/:w:/g/personal/ajch9f_umsystem_edu/Ee93MYDwI-VGjJh-8eS6ZWUBbvo9pCm_IHOkbm5Nqc6gwg?e=5KPU31
+
 ## 1. Initialize your environment
 - Run "conda env create -f environment.yml"
 - Run "pip install -r requirements.txt"
