@@ -62,7 +62,7 @@ def check_lock_file():
     """Checks if the lock file exists and if it's expired (>15 mins old). Returns (timestamp, username) or False if not valid."""
     folder_info = get_shared_folder_drive_item()
     if not folder_info:
-        return False  
+        return "ACCESS_DENIED"  # Access denied if folder info is not available
 
     drive_id = folder_info["driveId"]
     item_id = folder_info["itemId"]

@@ -25,7 +25,7 @@ import sys
 from werkzeug.exceptions import HTTPException
 
 from utils.onedrive_utils import upload_new_file_no_duplicate, generate_share_id, get_user_profile, download_file_from_share_url, update_file_from_share_url, download_file_from_file_name, update_file_from_file_name
-from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp
+from utils.lockfile_utils import check_lock_file, create_lock_file, delete_lock_file, update_lock_timestamp, get_shared_folder_drive_item
 # NOTE: TO USE THE ACCESS TOKEN OR STORE ANYTHING FOR THE SESSION (like an email) USE session["access_token"], etc.
 
 # Load environment variables
@@ -152,7 +152,9 @@ def login():
 
             is_lock_file = check_lock_file()
 
-            if is_lock_file:
+            if is_lock_file=="ACCESS_DENIED":
+                return render_template("login.html", access_denied=True)
+            elif is_lock_file==True:
                 timestamp = is_lock_file[0]
                 last_user = is_lock_file[1]
                 dt = datetime.fromtimestamp(int(timestamp))
