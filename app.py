@@ -1,32 +1,19 @@
 from flask import Flask, g, session, render_template, jsonify, request, Response, send_file
 from dotenv import load_dotenv
-import msal
 import sqlite3
 import webview
 import threading
 from flask import Flask, render_template, request, session, redirect, url_for, flash
 import secrets
-import tempfile
 from openpyxl import load_workbook, Workbook 
 from openpyxl.utils import get_column_letter
-from io import BytesIO
 import re
 from fpdf import FPDF
 import os
 import json
 from datetime import datetime
-import time
-import pandas as pd
-from werkzeug.utils import secure_filename
-import requests
-import openpyxl
-import io
 import sys
 from werkzeug.exceptions import HTTPException
-
-# Load environment variables
-# This ensures it works in a bundled PyInstaller app
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Use correct folder paths for PyInstaller
 base_dir = os.path.abspath(os.path.dirname(__file__))
@@ -50,18 +37,7 @@ def resource_path(relative_path):
 
 # Configuration from environment variables
 app.secret_key = os.getenv("SECRET_KEY", secrets.token_hex(16))
-
-STUDENT_DB_URL=os.getenv("STUDENT_DB_URL")
-FIELDS_ORDER_URL = os.getenv("FIELDS_ORDER_URL")
-STUDENT_FILES_URL = os.getenv("STUDENT_FILES_URL")
-
-REPORT_TEMPLATE_NAME=os.getenv("REPORT_TEMPLATE_NAME")
-STUDENT_DB_NAME=os.getenv("STUDENT_DB_NAME")
-FIELDS_ORDER_NAME = os.getenv("FIELDS_ORDER_NAME")
-
 STUDENT_DB_LOCAL_PATH="students_local.db"
-FIELD_ORDER_LOCAL_PATH="field_order.txt"
-global_mode = "view"
 
 # Global paths for templates and field order
 TEMPLATES_XLSX_PATH = None
@@ -82,7 +58,7 @@ def handle_exception(e):
         return e  # Let Flask handle it normally
     
     flash(f'An error occurred: {str(e)}', 'danger')
-    if global_mode:
+    if session.get("logged_in"):
         return redirect(request.referrer or url_for('database'))
     else:
         # return to index if not logged in
@@ -96,13 +72,16 @@ def handle_exception(e):
 def exit_app():
     webview.windows[0].destroy() #closes the window
     return Response(status=204)  # No Content
+
 # logout
 @app.route('/logout')
 def logout():
+    session["logged_in"] = False
     return redirect(url_for('index'))
        
 @app.route('/')
 def index():
+    session["logged_in"] = False
     startup_status = getattr(webview.windows[0], 'startup_status', None) if hasattr(webview, 'windows') and webview.windows else None
     return render_template("login.html", startup_status=startup_status)
 
@@ -117,7 +96,6 @@ def admin():
 @app.route('/export_to_excel')
 def export_to_excel():
     try:
-        
         students = fetch_students() 
 
         if not students:
@@ -149,14 +127,6 @@ def fetch_students():
     cursor = db.execute("SELECT * FROM students")
     return [dict(row) for row in cursor.fetchall()]
 
-
-@app.route('/import')
-def import_data():
-    return render_template('import.html')
-
-def get_color_scheme(id):
-    return "default"  # Return the default color scheme
-
 @app.route('/get_color_scheme_session')
 def get_color_scheme_session():
     color_scheme = session.get('color_scheme', 'default')
@@ -173,7 +143,6 @@ def get_templates():
     templates_dict = {}
     if TEMPLATES_XLSX_PATH and os.path.exists(TEMPLATES_XLSX_PATH):
         try:
-            print(f"Loading templates from {TEMPLATES_XLSX_PATH}")
             wb = load_workbook(TEMPLATES_XLSX_PATH)
             ws = wb.active
             for row in ws.iter_rows(min_row=2):  # Skip the header row
@@ -182,7 +151,6 @@ def get_templates():
                 if template_name and fields:
                     templates_dict[template_name] = fields
             
-            print("Loaded templates:", templates_dict)
             return templates_dict
         except Exception as e:
             print(f"Error reading templates.xlsx: {e}")
@@ -217,8 +185,6 @@ def generate_report():
             data = request.json
             selected_fields = data.get("fields", [])
             custom_title = data.get("title", "")
-
-            print(student_ids)
 
             if not selected_fields:
                 return jsonify({"success": False, "error": "No fields selected"}), 400
@@ -603,24 +569,41 @@ def login():
         wb = load_workbook(file)
         ws = wb.active
         columns = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
-        print(columns)
         db = get_db()
         db.execute('DROP TABLE IF EXISTS students')
-        col_defs = ', '.join([f'"{col}" TEXT' for col in columns])
+        columns_lower = [col.lower() for col in columns]
+        if 'id' not in columns_lower:
+            col_defs = '"id" INTEGER PRIMARY KEY AUTOINCREMENT, ' + ', '.join([f'"{col}" TEXT' for col in columns_lower])
+            insert_columns = columns_lower  # We don't insert into 'id', it auto-generates
+        else:
+            col_defs = ', '.join([f'"{col}" TEXT' for col in columns_lower])
+            insert_columns = columns_lower
+
+        # Create the table
         db.execute(f'CREATE TABLE students ({col_defs})')
+
+        # Insert rows
         for row in ws.iter_rows(min_row=2, values_only=True):
-            placeholders = ','.join(['?'] * len(columns))
-            db.execute(f'INSERT INTO students ({','.join(columns)}) VALUES ({placeholders})', row)
+            placeholders = ','.join(['?'] * len(insert_columns))
+            db.execute(
+                f'INSERT INTO students ({",".join(insert_columns)}) VALUES ({placeholders})',
+                row
+            )
+
         db.commit()
         db.close()
         # If field_order.txt is empty, populate it with columns
         if FIELD_ORDER_TXT_PATH and os.path.exists(FIELD_ORDER_TXT_PATH):
+            if "id" in columns_lower:
+                columns_lower.remove("id")
             with open(FIELD_ORDER_TXT_PATH, 'r+', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     f.seek(0)
-                    f.write('\n'.join(columns))
+                    f.write('\n'.join(columns_lower))
                     f.truncate()
+        
+        session["logged_in"] = True
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': f'Failed to process Excel file: {str(e)}'}), 400
@@ -639,11 +622,6 @@ def save_fields():
         return jsonify({'error': f'Failed to save fields: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    # Scan the folder containing the .exe and show file names
-    exe_folder = os.path.dirname(os.path.abspath(sys.argv[0]))
-    file_list = os.listdir(exe_folder)
-    file_message = "Files in this folder:\n" + "\n".join(file_list)
-
     startup_status = {
         'templates': 'found' if TEMPLATES_XLSX_PATH else 'created',
         'field_order': 'found' if FIELD_ORDER_TXT_PATH else 'created'
