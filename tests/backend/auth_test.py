@@ -97,17 +97,3 @@ class AuthLogoutAPITestCase(unittest.TestCase):
                 self.assertNotIn("access_token", session)
                 mock_logout.assert_called_once()
                 self.assertIn(b"LOGIN WITH MICROSOFT", response.data) # Adjust if your redirect target is different
-
-    def test_logoutUser_exits_program_through_x(self):
-        with self.client as client: # Use self.client
-            with client.session_transaction() as sess:
-                sess['access_token'] = 'mock_access_token'
-
-            with patch('app.generic_logout_functions', side_effect=self.mock_generic_logout_functions) as mock_logout:
-                with patch('app.webview') as mock_webview:
-                    mock_webview.windows = [MagicMock()]
-                    response = client.get('/logout_from_x')
-                    self.assertEqual(response.status_code, 204) # No Content
-                    self.assertNotIn("access_token", session)
-                    mock_logout.assert_called_once()
-                    mock_webview.windows[0].destroy.assert_called_once()

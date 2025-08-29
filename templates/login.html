@@ -6,6 +6,7 @@
   <title>Login - SusanDB</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   
   <style>
     body {
@@ -91,31 +92,51 @@
       margin: 0;
       font-size: 16px;
     }
+
+    #startup-status-icons {
+      position: absolute;
+      left: 20px;
+      bottom: 20px;
+      z-index: 1001;
+      display: flex;
+      gap: 16px;
+    }
+    .status-icon {
+      font-size: 2em;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
   </style>
 </head>
 <body class="pywebview-drag-region">
-  <div id="closeButton" style="position: absolute; top: 10px; right: 20px; cursor: pointer; font-size: x-large; font-weight: bold; color: white; opacity: .8;">&#10006;</div>
-
   <div class="container">
     <h1>SusanDB</h1>
+    <p class="text">Please download and select your database file to continue</p>
 
     <div class="login-box">
-      <form action="{{ url_for('login') }}" method="get" onsubmit="showLoading()">
-        <button class="primary-button" style="padding: 10px;" id="loginButton" type="submit">LOGIN WITH MICROSOFT</button>
+      <form id="excelForm" enctype="multipart/form-data">
+        <input type="file" id="excelInput" name="excel" accept=".xlsx,.xls" class="text" style="width: 100%; margin-bottom: 10px; background-color: var(--secondary-color-highlight); color: var(--quarternary-color);" />
+        <button class="primary-button" id="uploadButton" type="button" style="width: 100%; margin-top: 10px;">SELECT EXCEL SHEET</button>
         <div id="loadingSpinner" class="loading" style="margin-left: auto; margin-right: auto;"></div>
-        <button class="primary-button" style="margin-top: 10px; padding: 10px; display: none; background-color: rgb(205, 205, 205); border: none;" id="loadingButton" type="button">Please complete login in browser. Click here if login failed.</button>
       </form>
     </div>
 
 
-    {% if access_denied %}
-      <div class="access-denied-box" id="access-denied-box">
-        <p>Sorry {{ name }}, but you do not have access to this application. Please sign in with a different account.</p>
-      </div>
-    {% endif %}
-
+    <div class="access-denied-box" id="access-denied-box" style="display: none;">
+      <p>Sorry {{ name }}, but you do not have access to this application. Please sign in with a different account.</p>
+    </div>
     <img src="static/icons/icon-nurse.png" alt="Doctor Icon" class="icon left-icon">
     <img src="static/icons/icon-db.png" alt="Database Icon" class="icon right-icon">
+  </div>
+
+  <!-- Startup status icons -->
+  <div id="startup-status-icons">
+    <span class="status-icon" id="template-status" data-tooltip="Template file (templates.xlsx)">
+      <i class="fa fa-file-excel-o"></i>
+    </span>
+    <span class="status-icon" id="fieldorder-status" data-tooltip="Field order file (field_order.txt)">
+      <i class="fa fa-list-alt"></i>
+    </span>
   </div>
 
   <script>
@@ -130,11 +151,72 @@
         fetch('/exit_app'); // Call the Flask exit_app route
     });
 
-    document.getElementById('loadingButton').addEventListener('click', function() {
-        document.getElementById("loginButton").style.display = "block";
-        document.getElementById("loadingSpinner").style.display = "none";
-        document.getElementById("loadingButton").style.display = "none";
+    document.getElementById('uploadButton').addEventListener('click', function() {
+      var input = document.getElementById('excelInput');
+      var accessDeniedBox = document.getElementById('access-denied-box');
+      if (accessDeniedBox) {
+        accessDeniedBox.style.display = 'none';
+      }
+      if (!input.files.length) {
+        if (accessDeniedBox) {
+          accessDeniedBox.innerHTML = '<p>Please select an Excel file.</p>';
+          accessDeniedBox.style.display = 'block';
+        }
+        return;
+      }
+      document.getElementById('uploadButton').style.display = "none";
+      document.getElementById('loadingSpinner').style.display = "block";
+      var formData = new FormData();
+      formData.append('excel', input.files[0]);
+      fetch('/login', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('loadingSpinner').style.display = "none";
+        if (data.success) {
+          window.location.href = '/database';
+        } else {
+          if (accessDeniedBox) {
+            accessDeniedBox.innerHTML = `<p>${data.error || 'Upload failed.'}</p>`;
+            accessDeniedBox.style.display = 'block';
+          }
+          document.getElementById('uploadButton').style.display = "block";
+        }
+      })
+      .catch(() => {
+        document.getElementById('loadingSpinner').style.display = "none";
+        if (accessDeniedBox) {
+          accessDeniedBox.innerHTML = '<p>Upload failed.</p>';
+          accessDeniedBox.style.display = 'block';
+        }
+        document.getElementById('uploadButton').style.display = "block";
+      });
     });
+
+    // Set icon colors and tooltips based on startup_status
+    const startupStatus = {{ startup_status | tojson | safe }};
+    function setStatusIcons() {
+      const templateIcon = document.getElementById('template-status');
+      const fieldOrderIcon = document.getElementById('fieldorder-status');
+      if (startupStatus.templates === 'found') {
+        templateIcon.style.color = 'var(--primary-color)';
+        templateIcon.title='templates.xlsx has been located in your launch folder and will be used';
+      } else {
+        templateIcon.style.color = '#800320';
+        templateIcon.title='templates.xlsx has not been found, and a blank document has been created for you. If this is in error, please replace with the correct document and restart the app';
+      }
+      if (startupStatus.field_order === 'found') {
+        fieldOrderIcon.style.color = 'var(--primary-color)';
+        fieldOrderIcon.title ='field_order.txt has been located in your launch folder and will be used';
+      } else {
+        fieldOrderIcon.style.color = '#800320';
+        fieldOrderIcon.title ='field_order.txt has not been found, and a blank document has been created for you. If this is in error, please replace with the correct document and restart the app';
+      }
+    }
+    setStatusIcons();
+
   </script>
 </body>
 </html>
