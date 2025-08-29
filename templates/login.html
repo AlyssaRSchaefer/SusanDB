@@ -106,48 +106,6 @@
       cursor: pointer;
       transition: color 0.2s;
     }
-
-    /* Tooltip container */
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
-
-    /* Tooltip text */
-    .tooltip .tooltiptext {
-      visibility: hidden;
-      width: 220px;
-      background-color: black;
-      color: #fff;
-      text-align: center;
-      border-radius: 5px;
-      padding: 5px 0;
-      position: absolute;
-      z-index: 1;
-      bottom: 125%; /* Position the tooltip above the text */
-      left: 50%;
-      margin-left: -110px; /* Center the tooltip */
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    /* Tooltip arrow */
-    .tooltip .tooltiptext::after {
-      content: "";
-      position: absolute;
-      top: 100%; /* At the bottom of the tooltip */
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: black transparent transparent transparent;
-    }
-
-    /* Show the tooltip text when hovering over the container */
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-      opacity: 1;
-    }
   </style>
 </head>
 <body>
@@ -172,10 +130,10 @@
 
   <!-- Startup status icons -->
   <div id="startup-status-icons">
-    <span class="status-icon" id="template-status" data-tooltip="Template file (templates.xlsx)">
+    <span class="status-icon" id="template-status">
       <i class="fa fa-file-excel-o"></i>
     </span>
-    <span class="status-icon" id="fieldorder-status" data-tooltip="Field order file (field_order.txt)">
+    <span class="status-icon" id="fieldorder-status">
       <i class="fa fa-list-alt"></i>
     </span>
   </div>
@@ -187,12 +145,6 @@
   </div>
 
   <script>
-    function showLoading() {
-      document.getElementById("loginButton").style.display = "none";
-      document.getElementById("loadingSpinner").style.display = "block";
-      document.getElementById("loadingButton").style.display = "block";
-      document.getElementById("access-denied-box").style.display = "none";
-    }
 
     document.getElementById('uploadButton').addEventListener('click', function() {
       var input = document.getElementById('excelInput');

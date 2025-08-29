@@ -4,3 +4,5 @@ __pycache__/
 node_modules
 field_order.txt
 students_local.db
+build/
+dist/
