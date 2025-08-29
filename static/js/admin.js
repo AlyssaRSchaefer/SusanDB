@@ -58,20 +58,6 @@ function exportToExcel()
     });
 }
 
-/*
-function exportToExcel() {
-    if (window.pywebview) {
-        window.pywebview.api.export_to_excel().then(function(message) {
-            alert(message);
-        }).catch(function(error) {
-            console.error("Export failed:", error);
-        });
-    } else {
-        alert("This feature is only available in the desktop app.");
-    }
-}
-*/ 
-
 window.onload = () => {
     fetchColorScheme();
 };

@@ -568,14 +568,6 @@ td, th {
     margin-bottom: 5px;
 }
 
-.database-cell-input {
-    background-color: var(--secondary-color-highlight);
-    border: none;
-    outline: none;
-    font: var(--font-secondary);
-    color: var(--quarternary-color);
-}
-
 /* DETAILS PAGE */
 .details {
     display: flex;

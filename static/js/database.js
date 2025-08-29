@@ -192,50 +192,6 @@ function hideConfirmDeletePopup() {
     popup.style.display = "none";
 }
 
-function deleteStudents() {
-    loading.style.display = "flex";
-    fetch('/delete_students_from_db', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ids: selectedStudents })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message) {
-            fetchData();
-        } else if (data.error) {
-            console.error("Error:", data.error);
-            alert("Error: " + data.error);
-        }
-        hideConfirmDeletePopup();
-        loading.style.display = "none";
-    })
-    .catch(error => console.error("Fetch error:", error));
-}
-
-/* LOGIC TO UPDATE A DATABSE VALUE WHEN THE USER EDITS A TABLE CELL */
-function updateCellData(id, field, newValue) {
-    fetch('/update_database_cell', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: id, field: field, newValue: newValue })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            alert("Error: " + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('There was an issue updating the data.');
-        alert(error);
-    });
-}
 
 /* LOGIC TO LOAD IN TABLE COLUMNS FROM FIELD ORDER FILE */
 function fetchColumns() {
@@ -302,53 +258,6 @@ function fetchData(sort = {}, filter = [], search="") {
                 }
 
                 td.innerHTML = cellText;
-                
-                if (sessionMode != "view") {
-                    td.ondblclick = function () {
-                        // Check if an input field already exists
-                        if (td.querySelector('input')) {
-                            return; // Prevent adding another input
-                        }
-                    
-                        const originalText = td.innerHTML;
-                        const input = document.createElement('input');
-                        input.type = 'text';
-                        input.value = originalText.replace(/<span.*?>.*?<\/span>/g, ''); // Remove highlighted text
-                        input.classList.add("database-cell-input");
-                        input.style.width = `${Math.max(originalText.length * 8, 50)}px`; // Ensure a minimum width
-                        td.innerHTML = '';
-                        td.appendChild(input);
-                        input.focus();
-                    
-                        function resizeInput() {
-                            const span = document.createElement("span");
-                            span.style.visibility = "hidden";
-                            span.style.whiteSpace = "pre";
-                            span.style.font = getComputedStyle(input).font;
-                            span.textContent = input.value || " "; // Avoid width collapse
-                            document.body.appendChild(span);
-                    
-                            input.style.width = `${span.offsetWidth + 5}px`; // Add small padding
-                            document.body.removeChild(span);
-                        }
-                    
-                        input.addEventListener("input", resizeInput);
-                        resizeInput(); // Initial resize based on current text
-                    
-                        // Save the edited value when user presses Enter or loses focus
-                        function saveValue() {
-                            td.innerHTML = input.value;
-                            updateCellData(row["id"], col, input.value);
-                        }
-                    
-                        input.onblur = saveValue;
-                        input.onkeydown = function (e) {
-                            if (e.key === 'Enter') {
-                                saveValue();
-                            }
-                        };
-                    };                
-                }
                 
                 tr.appendChild(td);
             });

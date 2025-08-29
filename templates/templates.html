@@ -19,13 +19,11 @@
   <div class="templates-container">
     <div class="templates-section">
       <div class="templates-controls">
-        {% if session["mode"] != "view" %}
-            <div class="templates-controls-left">
-              <a href="{{ url_for('new_template') }}" style="text-decoration: none;">
-                <div id="new-template-btn" class="button primary-button">NEW TEMPLATE</div>
-              </a>
-            </div>
-        {% endif %}
+        <div class="templates-controls-left">
+          <a href="{{ url_for('new_template') }}" style="text-decoration: none;">
+            <div id="new-template-btn" class="button primary-button">NEW TEMPLATE</div>
+          </a>
+        </div>
       </div>
       <div class="templates-divider"></div>
       <div class="templates-table-container">
@@ -54,11 +52,9 @@
     <div class="templates-section" id="fields-section" style="display: none;">
       
       <div class="templates-controls">
-        {% if session["mode"] != "view" %}
         <div class="templates-controls-left">
           <div id="new-field-btn" class="button primary-button" onclick="openFieldPopup()">NEW FIELD</div>
         </div>
-        {% endif %}
       </div>
       
       <div class="templates-divider"></div>
@@ -76,14 +72,12 @@
       </div>
       <div class="templates-controls">
         <div class="templates-controls-right">
-          {% if session["mode"] != "view" %}
             <div id="save-fields-btn" class="button primary-button" style="display: none;" onclick="saveTemplateChanges()">
               SAVE
             </div>
             <div id="revert-fields-btn" class="button primary-button" style="display: none;" onclick="revertTemplateChanges()">
               REVERT
             </div>
-          {% endif %}
         </div>
     </div>
   </div>

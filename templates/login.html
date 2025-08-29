@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - SusanDB</title>
+  <title>Login - Nursing Student Report Generator</title>
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="static/css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -106,11 +106,53 @@
       cursor: pointer;
       transition: color 0.2s;
     }
+
+    /* Tooltip container */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Tooltip text */
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 220px;
+      background-color: black;
+      color: #fff;
+      text-align: center;
+      border-radius: 5px;
+      padding: 5px 0;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%; /* Position the tooltip above the text */
+      left: 50%;
+      margin-left: -110px; /* Center the tooltip */
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    /* Tooltip arrow */
+    .tooltip .tooltiptext::after {
+      content: "";
+      position: absolute;
+      top: 100%; /* At the bottom of the tooltip */
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: black transparent transparent transparent;
+    }
+
+    /* Show the tooltip text when hovering over the container */
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
   </style>
 </head>
-<body class="pywebview-drag-region">
+<body>
   <div class="container">
-    <h1>SusanDB</h1>
+    <h1>ReportGen</h1>
     <p class="text">Please download and select your database file to continue</p>
 
     <div class="login-box">
@@ -121,10 +163,9 @@
       </form>
     </div>
 
+    <!-- used if excel fails to upload-->
+    <div class="access-denied-box" id="access-denied-box" style="display: none;"></div>
 
-    <div class="access-denied-box" id="access-denied-box" style="display: none;">
-      <p>Sorry {{ name }}, but you do not have access to this application. Please sign in with a different account.</p>
-    </div>
     <img src="static/icons/icon-nurse.png" alt="Doctor Icon" class="icon left-icon">
     <img src="static/icons/icon-db.png" alt="Database Icon" class="icon right-icon">
   </div>
@@ -139,6 +180,12 @@
     </span>
   </div>
 
+  <!-- Help icon for Excel format warning -->
+  <div id="excel-help-icon" style="position: fixed; right: 24px; bottom: 24px; z-index: 2000; cursor: pointer;">
+    <i class="fa fa-question-circle" style="font-size: 2.5em; color: var(--quarternary-color);"></i>
+    <img id="excel-format-warning" src="static/excel_format_warning.png" alt="Excel Format Warning" style="display:none; position:absolute; right:40px; bottom:40px; z-index:2001; max-width:320px; box-shadow:0 2px 8px rgba(0,0,0,0.15); border-radius:8px; background:white;" />
+  </div>
+
   <script>
     function showLoading() {
       document.getElementById("loginButton").style.display = "none";
@@ -146,10 +193,6 @@
       document.getElementById("loadingButton").style.display = "block";
       document.getElementById("access-denied-box").style.display = "none";
     }
-
-    document.getElementById('closeButton').addEventListener('click', function() {
-        fetch('/exit_app'); // Call the Flask exit_app route
-    });
 
     document.getElementById('uploadButton').addEventListener('click', function() {
       var input = document.getElementById('excelInput');
@@ -201,14 +244,14 @@
       const templateIcon = document.getElementById('template-status');
       const fieldOrderIcon = document.getElementById('fieldorder-status');
       if (startupStatus.templates === 'found') {
-        templateIcon.style.color = 'var(--primary-color)';
+        templateIcon.style.color = 'var(--secondary-color)';
         templateIcon.title='templates.xlsx has been located in your launch folder and will be used';
       } else {
         templateIcon.style.color = '#800320';
         templateIcon.title='templates.xlsx has not been found, and a blank document has been created for you. If this is in error, please replace with the correct document and restart the app';
       }
       if (startupStatus.field_order === 'found') {
-        fieldOrderIcon.style.color = 'var(--primary-color)';
+        fieldOrderIcon.style.color = 'var(--secondary-color)';
         fieldOrderIcon.title ='field_order.txt has been located in your launch folder and will be used';
       } else {
         fieldOrderIcon.style.color = '#800320';
@@ -217,6 +260,15 @@
     }
     setStatusIcons();
 
+    // Show excel_format_warning.png on hover of the help icon
+    const helpIcon = document.getElementById('excel-help-icon');
+    const warningImg = document.getElementById('excel-format-warning');
+    helpIcon.addEventListener('mouseenter', function() {
+      warningImg.style.display = 'block';
+    });
+    helpIcon.addEventListener('mouseleave', function() {
+      warningImg.style.display = 'none';
+    });
   </script>
 </body>
 </html>

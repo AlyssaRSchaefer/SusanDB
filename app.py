@@ -668,6 +668,6 @@ if __name__ == '__main__':
     flask_thread.start()
 
     # Create a PyWebView window to load the Flask app
-    window = webview.create_window('SusanDB', 'http://127.0.0.1:5000', frameless=False)
+    window = webview.create_window('ReportGen', 'http://127.0.0.1:5000', frameless=False)
     window.startup_status = startup_status
     webview.start()
